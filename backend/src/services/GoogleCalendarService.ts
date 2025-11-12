@@ -417,6 +417,104 @@ export class GoogleCalendarService {
 
     logger.info('Google Calendar disconnected', { bookingUserId });
   }
+
+  /**
+   * Batch query freebusy information for multiple calendars
+   * This is MUCH more efficient than fetching events individually
+   * 
+   * Google Calendar API allows querying up to 50 calendars per request
+   * This method handles batching and returns busy periods for each user
+   * 
+   * @param userCalendarMap - Map of booking user IDs to their calendar IDs
+   * @param startTime - Start of the time range
+   * @param endTime - End of the time range
+   * @returns Map of booking user IDs to their busy time periods
+   */
+  async batchQueryFreeBusy(
+    userCalendarMap: Map<string, { calendarId: string; refreshToken: string }>,
+    startTime: Date,
+    endTime: Date
+  ): Promise<Map<string, Array<{ start: Date; end: Date }>>> {
+    const result = new Map<string, Array<{ start: Date; end: Date }>>();
+
+    if (userCalendarMap.size === 0) {
+      return result;
+    }
+
+    // Google Calendar API supports up to 50 calendars per freebusy request
+    const BATCH_SIZE = 50;
+    const entries = Array.from(userCalendarMap.entries());
+    const batches: typeof entries[] = [];
+
+    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+      batches.push(entries.slice(i, i + BATCH_SIZE));
+    }
+
+    // Process each batch
+    for (const batch of batches) {
+      try {
+        // Use the first user's credentials (they all have the same access scope)
+        // This is safe because we're only querying, not modifying
+        const firstUserId = batch[0][0];
+        const calendar = await this.getCalendarClient(firstUserId);
+
+        const items = batch.map(([_, data]) => ({ id: data.calendarId }));
+
+        const response = await calendar.freebusy.query({
+          requestBody: {
+            timeMin: startTime.toISOString(),
+            timeMax: endTime.toISOString(),
+            items
+          }
+        });
+
+        // Parse results
+        const calendars = response.data.calendars || {};
+        
+        for (const [bookingUserId, data] of batch) {
+          const calendarData = calendars[data.calendarId];
+          
+          if (!calendarData) {
+            result.set(bookingUserId, []);
+            continue;
+          }
+
+          // Extract busy periods
+          const busyPeriods = (calendarData.busy || [])
+            .filter(period => period.start && period.end)
+            .map(period => ({
+              start: new Date(period.start!),
+              end: new Date(period.end!)
+            }));
+
+          result.set(bookingUserId, busyPeriods);
+        }
+
+        logger.debug('Batch freebusy query successful', {
+          batchSize: batch.length,
+          calendarsQueried: items.length
+        });
+      } catch (error) {
+        logger.error('Batch freebusy query failed', { 
+          error,
+          batchSize: batch.length 
+        });
+
+        // Fallback: set empty busy times for this batch
+        for (const [bookingUserId] of batch) {
+          result.set(bookingUserId, []);
+        }
+      }
+    }
+
+    logger.info('Batch freebusy query completed', {
+      totalUsers: userCalendarMap.size,
+      batches: batches.length,
+      successCount: result.size
+    });
+
+    return result;
+  }
 }
 
 export const googleCalendarService = new GoogleCalendarService();

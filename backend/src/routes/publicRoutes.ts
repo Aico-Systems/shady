@@ -20,6 +20,11 @@ export async function handlePublicRoutes(request: Request, url: URL): Promise<Re
       return await handleGetAvailability(url);
     }
 
+    // GET /api/public/available-days
+    if (path === '/api/public/available-days' && method === 'GET') {
+      return await handleGetAvailableDays(url);
+    }
+
     // POST /api/public/bookings
     if (path === '/api/public/bookings' && method === 'POST') {
       return await handleCreateBooking(request);
@@ -81,6 +86,47 @@ async function handleGetAvailability(url: URL): Promise<Response> {
     });
   } catch (error: any) {
     logger.error('Failed to get availability', { error, orgIdentifier });
+    return errorResponse(error.message, 500);
+  }
+}
+
+/**
+ * GET /api/public/available-days
+ * Get dates that have at least one available slot
+ */
+async function handleGetAvailableDays(url: URL): Promise<Response> {
+  let orgIdentifier = url.searchParams.get('orgId');
+  const startDate = url.searchParams.get('startDate');
+  const endDate = url.searchParams.get('endDate');
+  const durationMinutes = url.searchParams.get('durationMinutes');
+
+  if (!orgIdentifier || !startDate || !endDate) {
+    return errorResponse('Missing required parameters: orgId, startDate, endDate', 400);
+  }
+
+  try {
+    // Resolve booking slug to organization ID if needed
+    let orgId = orgIdentifier;
+    const config = await db.query.bookingConfigs.findFirst({
+      where: eq(bookingConfigs.bookingSlug, orgIdentifier)
+    });
+    if (config) {
+      orgId = config.organizationId;
+    }
+
+    const availableDays = await availabilityService.getAvailableDays({
+      organizationId: orgId,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      durationMinutes: durationMinutes ? parseInt(durationMinutes) : undefined
+    });
+
+    return jsonResponse({
+      success: true,
+      data: availableDays
+    });
+  } catch (error: any) {
+    logger.error('Failed to get available days', { error, orgIdentifier });
     return errorResponse(error.message, 500);
   }
 }

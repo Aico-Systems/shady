@@ -59,6 +59,7 @@ $effect(() => {
   let selectedDate = $state<Date | null>(null);
   let selectedSlot = $state<AvailabilitySlot | null>(null);
   let availableSlots = $state<AvailabilitySlot[]>([]);
+  let availableDates = $state<Date[]>([]);
   let config = $state<BookingConfig | null>(null);
   let visitorData = $state<{ name?: string; email: string; phone?: string; [key: string]: any }>({
     email: '',
@@ -144,10 +145,41 @@ let error = $state<string | null>(null);
       loading = true;
       error = null;
       config = await api.getConfig(orgId);
+      
+      // Load available days for the calendar
+      if (config) {
+        await loadAvailableDays();
+      }
     } catch (err: any) {
       error = err.message ?? get(t)('widget.errors.generic');
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadAvailableDays() {
+    if (!orgId || !config) return;
+
+    try {
+      const today = new Date();
+      const maxDate = addDays(today, config.advanceBookingDays);
+      
+      const dayStrings = await api.getAvailableDays({
+        orgId,
+        startDate: today,
+        endDate: maxDate,
+        durationMinutes: config.bookingDurationMinutes,
+      });
+
+      // Convert YYYY-MM-DD strings to Date objects
+      availableDates = dayStrings.map(dateStr => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      });
+    } catch (err: any) {
+      // Don't show error to user - calendar will just show all days as available
+      console.warn('Failed to load available days:', err);
+      availableDates = [];
     }
   }
 
@@ -189,6 +221,8 @@ let error = $state<string | null>(null);
       selectedDate = null;
       selectedSlot = null;
       availableSlots = [];
+      // Refresh available days when returning to calendar
+      loadAvailableDays();
     }
     if (step === 'time') {
       selectedSlot = null;
@@ -263,6 +297,7 @@ let error = $state<string | null>(null);
           bind:selectedDate
           minDate={new Date()}
           maxDate={addDays(new Date(), config.advanceBookingDays)}
+          availableDates={availableDates}
           onSelectDate={handleDateSelect}
           locale={currentLocale}
         />

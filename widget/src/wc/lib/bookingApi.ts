@@ -111,4 +111,31 @@ export class BookingApi {
     const data = await response.json();
     return data.data;
   }
+
+  /**
+   * Get available days within a date range
+   * Returns an array of date strings (YYYY-MM-DD) that have at least one available slot
+   */
+  async getAvailableDays(params: {
+    orgId: string;
+    startDate: Date;
+    endDate: Date;
+    durationMinutes?: number;
+  }): Promise<string[]> {
+    const query = new URLSearchParams({
+      orgId: params.orgId,
+      startDate: params.startDate.toISOString(),
+      endDate: params.endDate.toISOString(),
+      ...(params.durationMinutes && { durationMinutes: params.durationMinutes.toString() })
+    });
+
+    const response = await fetch(`${this.baseUrl}/api/public/available-days?${query}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch available days: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+  }
 }
