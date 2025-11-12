@@ -111,4 +111,31 @@ export class BookingApi {
     const data = await response.json();
     return data.data;
   }
+
+  /**
+   * Get a list of dates that have at least one available slot
+   * Used to grey out unavailable days in the calendar
+   */
+  async getAvailableDates(params: {
+    orgId: string;
+    startDate: Date;
+    endDate: Date;
+    durationMinutes?: number;
+  }): Promise<string[]> {
+    const query = new URLSearchParams({
+      orgId: params.orgId,
+      startDate: params.startDate.toISOString(),
+      endDate: params.endDate.toISOString(),
+      ...(params.durationMinutes && { durationMinutes: params.durationMinutes.toString() })
+    });
+
+    const response = await fetch(`${this.baseUrl}/api/public/available-dates?${query}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch available dates: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+  }
 }

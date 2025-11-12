@@ -91,6 +91,37 @@ export class AvailabilityService {
   }
 
   /**
+   * Get a list of dates that have at least one available slot
+   * This is optimized for calendar display to grey out unavailable days
+   * 
+   * @param options - Organization ID and date range
+   * @returns Array of date strings (YYYY-MM-DD) that have availability
+   */
+  async getAvailableDates(options: AvailabilityOptions): Promise<string[]> {
+    const slots = await this.getAvailableSlots(options);
+    
+    // Extract unique dates from all available slots
+    const dateSet = new Set<string>();
+    
+    for (const slot of slots) {
+      // Format date as YYYY-MM-DD in UTC
+      const dateStr = slot.startTime.toISOString().split('T')[0];
+      dateSet.add(dateStr);
+    }
+    
+    // Convert to sorted array
+    const dates = Array.from(dateSet).sort();
+    
+    logger.debug('Available dates calculated', {
+      organizationId: options.organizationId,
+      dateCount: dates.length,
+      dateRange: { start: options.startDate.toISOString(), end: options.endDate.toISOString() }
+    });
+    
+    return dates;
+  }
+
+  /**
    * Calculate available slots for a single user within a date range
    * 
    * This method:
