@@ -1,0 +1,213 @@
+{
+  "app": {
+    "meta": {
+      "title": "Aico Booking Admin",
+      "tagline": "Live Operations Console"
+    },
+    "welcome": "Welcome back, {name}",
+    "headline": "Coordinate bookings, calendars and configuration",
+    "subheadline": "Stay in control of availability, approvals and the widget experience across organizations."
+  },
+  "auth": {
+    "title": "Sign in to Booking Admin",
+    "subtitle": "Use your organization account to continue managing bookings.",
+    "signIn": "Sign in with Logto"
+  },
+  "states": {
+    "initializing": "Preparing your workspace…",
+    "noOrgTitle": "No organization connected",
+    "noOrgSubtitle": "Ask your administrator to assign you to an organization."
+  },
+  "navigation": {
+    "users": "Team",
+    "bookings": "Bookings",
+    "config": "Configuration"
+  },
+  "insights": {
+    "organization": "Organization",
+    "organizationHelp": "Context for API access and policies",
+    "identity": "Signed in as",
+    "identityHelp": "Used for audit logs and calendar sync",
+    "status": "Current focus",
+    "statusHelp": "Switch sections from the sidebar"
+  },
+  "actions": {
+    "back": "Back",
+    "close": "Close",
+    "add": "Add",
+    "save": "Save",
+    "saving": "Saving…",
+    "create": "Create",
+    "creating": "Creating…",
+    "copyCode": "Copy embed code",
+    "joinMeeting": "Join meeting",
+    "cancel": "Cancel",
+    "logout": "Log out",
+    "openMenu": "Open navigation",
+    "closeMenu": "Close navigation",
+    "confirmCancel": "Cancel booking with {name}?",
+    "cancellationReason": "Cancellation reason (optional)"
+  },
+  "statuses": {
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
+    "pending": "Pending"
+  },
+  "pages": {
+    "users": {
+      "title": "Bookable Team",
+      "subtitle": "Manage who can receive bookings, their calendars and availability windows.",
+      "loading": "Loading users…",
+      "emptyTitle": "No bookable users yet",
+      "emptyHelp": "Team members will appear after they have been added to the booking service.",
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "calendar": "Google Calendar",
+        "active": "Active",
+        "actions": "Actions"
+      },
+      "days": {
+        "sunday": "Sunday",
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday"
+      },
+      "google": {
+        "connected": "Connected",
+        "disconnected": "Not connected",
+        "connect": "Connect calendar"
+      },
+      "buttons": {
+        "availability": "Availability",
+        "create": "Create user"
+      },
+      "modals": {
+        "availability": {
+          "title": "Availability for {name}",
+          "addSlot": "Add time slot",
+          "rangeSeparator": "to",
+          "cancel": "Close",
+          "save": "Save availability",
+          "saving": "Saving…"
+        },
+        "create": {
+          "title": "Create bookable user",
+          "emailLabel": "Email",
+          "emailHelp": "Used for calendar sync and notifications",
+          "nameLabel": "Display name",
+          "nameHelp": "Shown to visitors inside the widget",
+          "timezoneLabel": "Timezone",
+          "cancel": "Close",
+          "create": "Create user",
+          "creating": "Creating…"
+        }
+      },
+      "notifications": {
+        "syncError": "Failed to sync your user profile.",
+        "loadError": "Failed to load team members.",
+        "updateError": "Failed to update the user status.",
+        "connectError": "Could not start Google Calendar connection.",
+        "availabilityError": "Failed to save availability.",
+        "availabilitySaved": "Availability saved successfully.",
+        "userCreated": "User created successfully.",
+        "userCreateError": "Failed to create user.",
+        "googleConnected": "Google Calendar connected successfully."
+      }
+    },
+    "bookings": {
+      "title": "Bookings",
+      "subtitle": "Monitor inbound requests, meeting links and visitor information.",
+      "stats": {
+        "total": "Total bookings",
+        "confirmed": "Confirmed",
+        "upcoming": "Upcoming",
+        "cancelled": "Cancelled"
+      },
+      "loading": "Loading bookings…",
+      "emptyTitle": "No bookings yet",
+      "emptyHelp": "Bookings will appear once visitors start scheduling appointments.",
+      "table": {
+        "datetime": "Date & time",
+        "with": "With",
+        "visitor": "Visitor",
+        "contact": "Contact",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "notifications": {
+        "loadError": "Failed to load bookings.",
+        "cancelSuccess": "Booking cancelled.",
+        "cancelError": "Failed to cancel booking."
+      }
+    },
+    "config": {
+      "title": "Configuration",
+      "subtitle": "Control the public widget settings, fields and booking policies.",
+      "widget": {
+        "title": "Widget embedding",
+        "subtitle": "Copy the code into any website or CMS.",
+        "slugLabel": "Booking slug (public identifier)",
+        "slugHelp": "Lowercase letters, numbers or hyphen. Leave blank to use the organization ID.",
+        "embedLabel": "Embed code"
+      },
+      "fields": {
+        "title": "Visitor form fields",
+        "subtitle": "Customize which details you collect before a booking.",
+        "empty": "No fields yet. Add a field to get started.",
+        "fieldName": "Field name (internal)",
+        "fieldLabel": "Label (shown to visitors)",
+        "fieldType": "Field type",
+        "required": "Required",
+        "addField": "Add field",
+        "removeField": "Remove field",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "types": {
+          "text": "Text",
+          "email": "Email",
+          "tel": "Phone",
+          "textarea": "Long text",
+          "select": "Dropdown"
+        }
+      },
+      "booking": {
+        "title": "Booking settings",
+        "subtitle": "Duration, booking horizon and buffer times.",
+        "duration": "Booking duration",
+        "durationHelp": "Length of each booking slot.",
+        "advanceWindow": "Advance booking window (days)",
+        "advanceHelp": "How many days ahead visitors can book.",
+        "buffer": "Buffer between bookings (minutes)",
+        "bufferHelp": "Time between meetings."
+      },
+      "email": {
+        "title": "Email notifications",
+        "subtitle": "Automated confirmations for visitors and team members.",
+        "toggle": "Enable email notifications",
+        "toggleHelp": "Send confirmation emails with booking details and Meet links.",
+        "disabled": "Emails disabled",
+        "disabledHelp": "Visitors and team members will not receive confirmation emails.",
+        "enabled": "Emails enabled",
+        "enabledHelp": "Visitors receive confirmations with booking details."
+      },
+      "save": {
+        "cta": "Save configuration",
+        "saving": "Saving…"
+      },
+      "readonly": {
+        "title": "Read-only access",
+        "message": "You don't have permission to modify this configuration."
+      },
+      "notifications": {
+        "saveSuccess": "Configuration saved.",
+        "saveError": "Failed to save configuration.",
+        "loadError": "Failed to load configuration.",
+        "codeCopied": "Embed code copied to clipboard."
+      }
+    }
+  }
+}

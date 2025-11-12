@@ -1,0 +1,387 @@
+@import './theme.css';
+
+:root {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--aico-color-text-primary);
+  background-color: var(--aico-color-bg-primary);
+  --surface-radius-sm: 14px;
+  --surface-radius: 22px;
+  --surface-radius-lg: 32px;
+  --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-medium: 0 20px 45px rgba(15, 23, 42, 0.12);
+  --card-border: color-mix(in srgb, var(--aico-color-border-light) 75%, transparent);
+  --page-gutter: clamp(1.25rem, 2vw, 2rem);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--aico-color-bg-primary);
+  color: var(--aico-color-text-primary);
+  transition: var(--transition-colors);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--aico-color-text-tertiary);
+  margin-bottom: 0.35rem;
+}
+
+button {
+  border: 1px solid color-mix(in srgb, var(--aico-color-border-light) 80%, transparent);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  min-height: 38px;
+  background: color-mix(in srgb, var(--aico-color-bg-primary) 98%, transparent);
+  color: var(--aico-color-text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  line-height: 1.2;
+  transition: var(--transition-button);
+  box-shadow: none;
+}
+
+button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--aico-color-border-light) 60%, transparent);
+  background: color-mix(in srgb, var(--aico-color-bg-secondary) 70%, transparent);
+}
+
+button:focus-visible {
+  outline: 2px solid rgba(var(--aico-mint-rgb), 0.4);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.cta,
+.btn-primary {
+  background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 12px 25px rgba(var(--aico-mint-rgb), 0.35);
+}
+
+.btn-secondary {
+  background: color-mix(in srgb, var(--aico-color-bg-secondary) 85%, transparent);
+}
+
+.btn-danger {
+  background: rgba(var(--aico-danger-rgb), 0.12);
+  color: var(--aico-danger);
+  border-color: rgba(var(--aico-danger-rgb), 0.25);
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--aico-color-border-light);
+  padding: 0.65rem 0.85rem;
+  background: color-mix(in srgb, var(--aico-color-bg-primary) 95%, transparent);
+  color: var(--aico-color-text-primary);
+  font: inherit;
+  transition: var(--transition-all);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--aico-mint);
+  box-shadow: 0 0 0 3px rgba(var(--aico-mint-rgb), 0.25);
+}
+
+label {
+  font-weight: 600;
+  color: var(--aico-color-text-secondary);
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gutter);
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 1.75rem);
+}
+
+.page-header p {
+  margin: 0.2rem 0 0;
+  color: var(--aico-color-text-secondary);
+  max-width: 520px;
+}
+
+.loading,
+.empty-state,
+.empty-state-small {
+  padding: clamp(1.25rem, 3vw, 1.5rem);
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  background: var(--aico-color-bg-primary);
+  text-align: center;
+  color: var(--aico-color-text-secondary);
+}
+
+.empty-state svg,
+.loading svg {
+  color: var(--aico-color-text-tertiary);
+  margin-bottom: 0.75rem;
+}
+
+.empty-state-small {
+  padding: 1rem;
+}
+
+.users-table,
+.bookings-table {
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: var(--aico-color-bg-primary);
+  box-shadow: none;
+  overflow-x: auto;
+}
+
+.users-table table,
+.bookings-table table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table thead {
+  background: color-mix(in srgb, var(--aico-color-bg-secondary) 65%, transparent);
+}
+
+th {
+  text-align: left;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--aico-color-text-tertiary);
+  padding: 0.85rem 1.2rem;
+}
+
+td {
+  padding: 1.1rem 1.2rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--aico-color-border-light) 60%, transparent);
+  background: color-mix(in srgb, var(--aico-color-bg-primary) 98%, transparent);
+  vertical-align: top;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--aico-color-bg-secondary) 25%, transparent);
+}
+
+tbody tr:hover td {
+  background: color-mix(in srgb, var(--aico-color-bg-secondary) 45%, transparent);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: rgba(var(--aico-success-rgb), 0.16);
+  color: var(--aico-success);
+}
+
+.badge-danger {
+  background: rgba(var(--aico-danger-rgb), 0.16);
+  color: var(--aico-danger);
+}
+
+.badge-default {
+  background: rgba(var(--aico-info-rgb), 0.12);
+  color: var(--aico-info);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  position: relative;
+  border-radius: 16px;
+  padding: 1.1rem;
+  background: var(--aico-color-bg-primary);
+  border: 1px solid var(--card-border);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.stat-value {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 700;
+}
+
+.stat-label {
+  color: var(--aico-color-text-tertiary);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.modal {
+  width: min(540px, 90vw);
+  max-height: 90vh;
+  background: color-mix(in srgb, var(--aico-color-bg-primary) 98%, transparent);
+  border-radius: var(--surface-radius-lg);
+  padding: 2rem;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.help-text {
+  font-size: 0.85rem;
+  color: var(--aico-color-text-tertiary);
+}
+
+.widget-code {
+  border-radius: 18px;
+  border: 1px solid var(--aico-color-border-light);
+  background: color-mix(in srgb, var(--aico-color-bg-secondary) 80%, transparent);
+  padding: 1.5rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.widget-code pre {
+  background: #0f172a;
+  color: #f1f5f9;
+  border-radius: 14px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--aico-color-border-light);
+  font-size: 0.85rem;
+  color: var(--aico-color-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .page-header button {
+    width: 100%;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-surface {
+    padding: clamp(1rem, 4vw, 1.5rem) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .users-table table,
+  .bookings-table table {
+    min-width: 560px;
+  }
+}

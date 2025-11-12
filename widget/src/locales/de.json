@@ -1,0 +1,65 @@
+{
+  "app": {
+    "title": "Aico Booking Widget",
+    "subtitle": "Biete ein hochwertiges Buchungserlebnis als Web Component überall an.",
+    "demo": {
+      "livePreview": "Live-Vorschau",
+      "embedTitle": "Einfacher Embed-Code",
+      "embedDescription": "Einfügen, Organisation konfigurieren, fertig.",
+      "codeTitle": "HTML Snippet",
+      "chips": [
+        "Web Component",
+        "Dark & Light",
+        "Mehrsprachig",
+        "Responsiv"
+      ]
+    }
+  },
+  "actions": {
+    "back": "Zurück",
+    "continue": "Weiter",
+    "confirm": "Buchung bestätigen",
+    "done": "Schließen",
+    "retry": "Erneut versuchen"
+  },
+  "widget": {
+    "steps": {
+      "calendar": "Datum wählen",
+      "date": "Datum wählen",
+      "time": "Uhrzeit wählen",
+      "form": "Deine Angaben",
+      "details": "Deine Angaben",
+      "confirmation": "Fertig"
+    },
+    "labels": {
+      "selectedDate": "Ausgewähltes Datum",
+      "with": "Mit",
+      "time": "Zeit",
+      "meetingLink": "Meeting-Link",
+      "addGoogle": "Zu Google Calendar hinzufügen",
+      "downloadIcs": ".ics-Datei laden"
+    },
+    "form": {
+      "title": "Deine Informationen",
+      "notes": "Zusätzliche Hinweise",
+      "notesPlaceholder": "Gibt es etwas, das wir wissen sollten?",
+      "optional": "optional",
+      "errorRequired": "{field} ist erforderlich",
+      "errorEmail": "Bitte gültige E-Mail-Adresse eingeben"
+    },
+    "confirmation": {
+      "title": "Buchung bestätigt",
+      "subtitle": "Eine Bestätigung mit Kalender-Link ist unterwegs.",
+      "with": "Termin mit",
+      "date": "Datum",
+      "time": "Zeit"
+    },
+    "errors": {
+      "missingOrg": "Organisations-ID wird benötigt.",
+      "noSlots": "Keine Zeiten für dieses Datum verfügbar.",
+      "generic": "Etwas ist schiefgelaufen. Bitte erneut versuchen."
+    },
+    "loading": "Verfügbarkeiten werden geladen…",
+    "emptySlots": "Keine Zeiten verfügbar. Bitte anderes Datum wählen."
+  }
+}

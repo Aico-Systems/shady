@@ -1,0 +1,213 @@
+{
+  "app": {
+    "meta": {
+      "title": "Aico Booking Admin",
+      "tagline": "Operations Konsole"
+    },
+    "welcome": "Willkommen zurück, {name}",
+    "headline": "Koordiniere Buchungen, Kalender und Konfiguration",
+    "subheadline": "Behalte Verfügbarkeiten, Anfragen und das Widget-Erlebnis für alle Organisationen im Blick."
+  },
+  "auth": {
+    "title": "Im Booking Admin anmelden",
+    "subtitle": "Nutze dein Organisationskonto, um fortzufahren.",
+    "signIn": "Mit Logto anmelden"
+  },
+  "states": {
+    "initializing": "Arbeitsbereich wird vorbereitet…",
+    "noOrgTitle": "Keine Organisation verbunden",
+    "noOrgSubtitle": "Bitte Administrator um Zugriff auf eine Organisation."
+  },
+  "navigation": {
+    "users": "Team",
+    "bookings": "Buchungen",
+    "config": "Konfiguration"
+  },
+  "insights": {
+    "organization": "Organisation",
+    "organizationHelp": "Kontext für API-Zugriff und Richtlinien",
+    "identity": "Angemeldet als",
+    "identityHelp": "Für Audit-Logs und Kalendersync",
+    "status": "Aktueller Bereich",
+    "statusHelp": "Über die Seitenleiste wechseln"
+  },
+  "actions": {
+    "back": "Zurück",
+    "close": "Schließen",
+    "add": "Hinzufügen",
+    "save": "Speichern",
+    "saving": "Speichern…",
+    "create": "Erstellen",
+    "creating": "Wird erstellt…",
+    "copyCode": "Embed-Code kopieren",
+    "joinMeeting": "Meeting öffnen",
+    "cancel": "Abbrechen",
+    "logout": "Abmelden",
+    "openMenu": "Navigation öffnen",
+    "closeMenu": "Navigation schließen",
+    "confirmCancel": "Buchung mit {name} abbrechen?",
+    "cancellationReason": "Stornierungsgrund (optional)"
+  },
+  "statuses": {
+    "confirmed": "Bestätigt",
+    "cancelled": "Storniert",
+    "pending": "Ausstehend"
+  },
+  "pages": {
+    "users": {
+      "title": "Buchbares Team",
+      "subtitle": "Steuere, wer buchbar ist, inklusive Kalender und Verfügbarkeiten.",
+      "loading": "Teammitglieder werden geladen…",
+      "emptyTitle": "Noch keine buchbaren Nutzer",
+      "emptyHelp": "Sobald Teammitglieder hinzugefügt wurden, erscheinen sie hier.",
+      "table": {
+        "name": "Name",
+        "email": "E-Mail",
+        "calendar": "Google Kalender",
+        "active": "Aktiv",
+        "actions": "Aktionen"
+      },
+      "days": {
+        "sunday": "Sonntag",
+        "monday": "Montag",
+        "tuesday": "Dienstag",
+        "wednesday": "Mittwoch",
+        "thursday": "Donnerstag",
+        "friday": "Freitag",
+        "saturday": "Samstag"
+      },
+      "google": {
+        "connected": "Verbunden",
+        "disconnected": "Nicht verbunden",
+        "connect": "Kalender verbinden"
+      },
+      "buttons": {
+        "availability": "Verfügbarkeit",
+        "create": "Nutzer anlegen"
+      },
+      "modals": {
+        "availability": {
+          "title": "Verfügbarkeit für {name}",
+          "addSlot": "Zeitfenster hinzufügen",
+          "rangeSeparator": "bis",
+          "cancel": "Schließen",
+          "save": "Verfügbarkeit speichern",
+          "saving": "Speichern…"
+        },
+        "create": {
+          "title": "Buchbaren Nutzer erstellen",
+          "emailLabel": "E-Mail",
+          "emailHelp": "Für Kalendersync und Benachrichtigungen",
+          "nameLabel": "Anzeigename",
+          "nameHelp": "Wird im Widget angezeigt",
+          "timezoneLabel": "Zeitzone",
+          "cancel": "Schließen",
+          "create": "Nutzer erstellen",
+          "creating": "Wird erstellt…"
+        }
+      },
+      "notifications": {
+        "syncError": "Dein Profil konnte nicht synchronisiert werden.",
+        "loadError": "Teammitglieder konnten nicht geladen werden.",
+        "updateError": "Status konnte nicht aktualisiert werden.",
+        "connectError": "Google-Kalender konnte nicht verbunden werden.",
+        "availabilityError": "Verfügbarkeit konnte nicht gespeichert werden.",
+        "availabilitySaved": "Verfügbarkeit gespeichert.",
+        "userCreated": "Nutzer erfolgreich erstellt.",
+        "userCreateError": "Nutzer konnte nicht erstellt werden.",
+        "googleConnected": "Google Kalender erfolgreich verbunden."
+      }
+    },
+    "bookings": {
+      "title": "Buchungen",
+      "subtitle": "Beobachte eingehende Anfragen, Meeting-Links und Besucherdaten.",
+      "stats": {
+        "total": "Buchungen gesamt",
+        "confirmed": "Bestätigt",
+        "upcoming": "Anstehend",
+        "cancelled": "Storniert"
+      },
+      "loading": "Buchungen werden geladen…",
+      "emptyTitle": "Noch keine Buchungen",
+      "emptyHelp": "Sobald Besucher Termine buchen, erscheinen sie hier.",
+      "table": {
+        "datetime": "Datum & Uhrzeit",
+        "with": "Mit",
+        "visitor": "Besucher",
+        "contact": "Kontakt",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "notifications": {
+        "loadError": "Buchungen konnten nicht geladen werden.",
+        "cancelSuccess": "Buchung storniert.",
+        "cancelError": "Buchung konnte nicht storniert werden."
+      }
+    },
+    "config": {
+      "title": "Konfiguration",
+      "subtitle": "Steuere Widget-Einstellungen, Felder und Buchungsregeln.",
+      "widget": {
+        "title": "Widget-Einbettung",
+        "subtitle": "Code in Webseiten oder CMS einfügen.",
+        "slugLabel": "Booking-Slug (öffentliche ID)",
+        "slugHelp": "Kleinbuchstaben, Zahlen oder Bindestrich. Leer lassen für die Organisations-ID.",
+        "embedLabel": "Embed-Code"
+      },
+      "fields": {
+        "title": "Besucherformular",
+        "subtitle": "Definiere, welche Daten vor einer Buchung benötigt werden.",
+        "empty": "Noch keine Felder. Füge ein Feld hinzu, um zu starten.",
+        "fieldName": "Feldname (intern)",
+        "fieldLabel": "Label (für Besucher)",
+        "fieldType": "Feldtyp",
+        "required": "Pflichtfeld",
+        "addField": "Feld hinzufügen",
+        "removeField": "Feld entfernen",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "types": {
+          "text": "Textfeld",
+          "email": "E-Mail",
+          "tel": "Telefon",
+          "textarea": "Langtext",
+          "select": "Auswahl"
+        }
+      },
+      "booking": {
+        "title": "Buchungs-Parameter",
+        "subtitle": "Dauer, Vorlauf und Pufferzeiten.",
+        "duration": "Dauer einer Buchung",
+        "durationHelp": "Länge jedes Zeitfensters.",
+        "advanceWindow": "Buchungsvorlauf (Tage)",
+        "advanceHelp": "So viele Tage im Voraus dürfen Besucher buchen.",
+        "buffer": "Puffer zwischen Terminen (Minuten)",
+        "bufferHelp": "Zeit zwischen Terminen."
+      },
+      "email": {
+        "title": "E-Mail-Benachrichtigungen",
+        "subtitle": "Automatische Bestätigungen für Besucher und Team.",
+        "toggle": "E-Mail-Benachrichtigungen aktivieren",
+        "toggleHelp": "Sendet Bestätigungen inklusive Meet-Link.",
+        "disabled": "E-Mails deaktiviert",
+        "disabledHelp": "Besucher und Team erhalten keine Bestätigungen.",
+        "enabled": "E-Mails aktiviert",
+        "enabledHelp": "Besucher erhalten Bestätigungen mit Details."
+      },
+      "save": {
+        "cta": "Konfiguration speichern",
+        "saving": "Speichern…"
+      },
+      "readonly": {
+        "title": "Nur-Lesen Zugriff",
+        "message": "Du hast keine Berechtigung, diese Konfiguration zu ändern."
+      },
+      "notifications": {
+        "saveSuccess": "Konfiguration gespeichert.",
+        "saveError": "Konfiguration konnte nicht gespeichert werden.",
+        "loadError": "Konfiguration konnte nicht geladen werden.",
+        "codeCopied": "Embed-Code kopiert."
+      }
+    }
+  }
+}

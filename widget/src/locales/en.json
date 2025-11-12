@@ -1,0 +1,65 @@
+{
+  "app": {
+    "title": "Aico Booking Widget",
+    "subtitle": "Embed a premium scheduling experience anywhere in a single web component.",
+    "demo": {
+      "livePreview": "Live widget preview",
+      "embedTitle": "Drop-in embed code",
+      "embedDescription": "Copy, paste and configure with your organization slug.",
+      "codeTitle": "HTML snippet",
+      "chips": [
+        "Web component",
+        "Dark & light",
+        "Internationalized",
+        "Responsive"
+      ]
+    }
+  },
+  "actions": {
+    "back": "Back",
+    "continue": "Continue",
+    "confirm": "Confirm booking",
+    "done": "Close",
+    "retry": "Try again"
+  },
+  "widget": {
+    "steps": {
+      "calendar": "Choose a date",
+      "date": "Choose a date",
+      "time": "Pick a time",
+      "form": "Your details",
+      "details": "Your details",
+      "confirmation": "All set"
+    },
+    "labels": {
+      "selectedDate": "Selected date",
+      "with": "With",
+      "time": "Time",
+      "meetingLink": "Meeting link",
+      "addGoogle": "Add to Google Calendar",
+      "downloadIcs": "Download .ics file"
+    },
+    "form": {
+      "title": "Your information",
+      "notes": "Additional notes",
+      "notesPlaceholder": "Any context you'd like to share?",
+      "optional": "optional",
+      "errorRequired": "{field} is required",
+      "errorEmail": "Enter a valid email address"
+    },
+    "confirmation": {
+      "title": "Booking confirmed",
+      "subtitle": "A confirmation email with calendar links is on the way.",
+      "with": "Meeting with",
+      "date": "Date",
+      "time": "Time"
+    },
+    "errors": {
+      "missingOrg": "Organization ID is required.",
+      "noSlots": "No available time slots for this date.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "loading": "Loading availability…",
+    "emptySlots": "No times available. Pick another day."
+  }
+}

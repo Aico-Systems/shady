@@ -1,0 +1,28 @@
+{
+  "name": "booking-service-backend",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "consola": "^3.4.2",
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.44.7",
+    "googleapis": "^144.0.0",
+    "jose": "^5.10.0",
+    "postgres": "^3.4.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "drizzle-kit": "^0.31.6",
+    "typescript": "^5.9.3"
+  }
+}
