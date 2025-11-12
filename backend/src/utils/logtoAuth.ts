@@ -123,28 +123,74 @@ async function checkSuperAdminRole(userId: string): Promise<boolean> {
       return false;
     }
 
-    // Get management token
-    const tokenResponse = await fetch(`${endpoint}/oidc/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: config.LOGTO_MANAGEMENT_APP_ID,
-        client_secret: config.LOGTO_MANAGEMENT_APP_SECRET,
-        resource: `${endpoint}/api`,
-        scope: 'all'
-      }).toString()
-    });
+    // Obtain a management API token.
+    // Try multiple resource indicators (Logto deployments may require the management API resource
+    // or the configured API resource). Try Basic auth first (preferred), then fall back to
+    // client_id/client_secret in the request body. Collect errors for debugging.
+    const resourceCandidates = [
+      'https://default.logto.app/api',
+      config.LOGTO_API_RESOURCE,
+      `${endpoint}/api`
+    ].filter(Boolean) as string[];
 
-    if (!tokenResponse.ok) {
-      logger.warn('Failed to get management token');
-      return false;
+    let managementToken: string | null = null;
+    const tokenErrors: string[] = [];
+
+    for (const resource of resourceCandidates) {
+      try {
+        // Try with Basic auth header first (this is how the setup script requests tokens)
+        const basicAuth = Buffer.from(`${config.LOGTO_MANAGEMENT_APP_ID}:${config.LOGTO_MANAGEMENT_APP_SECRET}`).toString('base64');
+        let res = await fetch(`${endpoint}/oidc/token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${basicAuth}`
+          },
+          body: new URLSearchParams({
+            grant_type: 'client_credentials',
+            resource,
+            scope: 'all'
+          }).toString()
+        });
+
+        if (!res.ok) {
+          // Fallback: try client_id/client_secret in body (some deployments accept this)
+          const text = await res.text();
+          tokenErrors.push(`${resource} (basic): ${res.status} ${text.slice(0, 200)}`);
+
+          res = await fetch(`${endpoint}/oidc/token`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+              grant_type: 'client_credentials',
+              client_id: config.LOGTO_MANAGEMENT_APP_ID,
+              client_secret: config.LOGTO_MANAGEMENT_APP_SECRET,
+              resource,
+              scope: 'all'
+            }).toString()
+          });
+        }
+
+        if (res.ok) {
+          const data = await res.json();
+          managementToken = data.access_token;
+          logger.debug('Obtained management token', { resource });
+          break;
+        } else {
+          const text = await res.text();
+          tokenErrors.push(`${resource} (form): ${res.status} ${text.slice(0, 200)}`);
+        }
+      } catch (err: any) {
+        tokenErrors.push(`${resource}: ${err.message}`);
+      }
     }
 
-    const tokenData = await tokenResponse.json();
-    const managementToken = tokenData.access_token;
+    if (!managementToken) {
+      logger.warn('Failed to get management token', { errors: tokenErrors });
+      return false;
+    }
 
     // Check user's roles
     const rolesResponse = await fetch(`${endpoint}/api/users/${userId}/roles`, {
