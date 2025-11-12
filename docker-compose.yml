@@ -55,6 +55,7 @@ services:
     volumes:
       - ./admin/src:/app/src
       - /app/node_modules
+      - ../blueprint:/app/blueprint:ro
       - ./.env:/workspace/.env.development:ro
     networks:
       - booking_network

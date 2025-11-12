@@ -1,214 +1,107 @@
-.PHONY: help up down restart logs db-shell db-studio db-migrate backend-dev backend-start backend-logs backend-shell admin-dev admin-logs widget-dev widget-logs dev logto-setup clean install setup
+# =============================================================================
+# Booking Service Development Makefile
+# =============================================================================
 
-# Default target
+COMPOSE = docker compose -f docker-compose.yml
+SERVICES = postgres backend admin widget-dev
+
+.DEFAULT_GOAL := help
+
+# =============================================================================
+# Help
+# =============================================================================
+.PHONY: help
 help:
-	@echo "=========================================="
-	@echo "Booking Service - Makefile Commands"
-	@echo "=========================================="
+	@echo "=== Booking Service Development Commands ==="
 	@echo ""
 	@echo "Quick Start:"
-	@echo "  make dev             - Start all services in dev mode (postgres + backend + admin + widget)"
-	@echo "  make up              - Start infrastructure only (postgres)"
-	@echo "  make down            - Stop all services"
-	@echo "  make restart         - Restart all services"
-	@echo "  make setup           - Full setup from scratch (install deps + init DB)"
+	@echo "  up                 Start all services"
+	@echo "  down               Stop all services"
+	@echo "  logs               Tail logs (SERVICE=name to filter)"
+	@echo "  ps                 Show service status"
 	@echo ""
 	@echo "Database:"
-	@echo "  make db-shell        - Open psql shell"
-	@echo "  make db-studio       - Launch Drizzle Studio"
-	@echo "  make db-migrate      - Generate and push migrations"
-	@echo "  make db-reset        - Drop and recreate database"
-	@echo ""
-	@echo "Backend:"
-	@echo "  make backend-dev     - Start backend in development mode (blocking)"
-	@echo "  make backend-logs    - Tail backend logs"
-	@echo "  make backend-shell   - Open shell in backend"
-	@echo ""
-	@echo "Frontend:"
-	@echo "  make admin-dev       - Start admin UI in development mode (blocking)"
-	@echo "  make admin-logs      - Tail admin UI logs"
-	@echo "  make widget-dev      - Start widget in development mode (blocking)"
-	@echo "  make widget-logs     - Tail widget logs"
+	@echo "  db-shell           Open psql shell"
+	@echo "  db-studio          Launch Drizzle Studio"
+	@echo "  db-migrate         Generate and push migrations"
 	@echo ""
 	@echo "Logto:"
-	@echo "  make logto-setup     - Configure Logto (API resource + SPA apps)"
+	@echo "  logto-setup        Configure Logto (API resource + SPA apps)"
+	@echo ""
+	@echo "Services (start/stop/logs/rebuild):"
+	@echo "  <service>          $(SERVICES)"
+	@echo "  <service>-logs     Example: make backend-logs"
+	@echo "  <service>-rebuild  Example: make backend-rebuild"
 	@echo ""
 	@echo "Utilities:"
-	@echo "  make logs            - Show all logs"
-	@echo "  make clean           - Clean up everything (containers, volumes)"
-	@echo "  make install         - Install all dependencies"
+	@echo "  build              Build all Docker images"
+	@echo "  clean              Full cleanup (all volumes & data)"
 	@echo ""
 
-# Start infrastructure only
+# =============================================================================
+# Stack Control
+# =============================================================================
+.PHONY: up down logs ps build clean
 up:
-	@echo "Starting Postgres..."
-	docker-compose up -d postgres
-	@sleep 3
-	@echo "✓ Postgres ready on port 5436"
-	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Run migrations: make db-migrate"
-	@echo "  2. Start backend: make backend-dev"
-	@echo "  3. Start admin UI: make admin-dev"
-	@echo "  4. Or start all: make dev"
+	$(COMPOSE) up -d --build
+	@echo "✅ Stack running:"
+	@echo "   Backend:  http://localhost:5006"
+	@echo "   Admin:    http://localhost:5175"
+	@echo "   Widget:   http://localhost:5174"
 
-# Start all services in dev mode
-dev:
-	@echo "Starting all services in development mode..."
-	@mkdir -p logs
-	@echo ""
-	@echo "1/4 Starting Postgres..."
-	@docker-compose up -d postgres
-	@sleep 3
-	@echo "✓ Postgres ready on port 5436"
-	@echo ""
-	@echo "2/4 Starting backend..."
-	@docker-compose up -d backend
-	@echo "✓ Backend starting on port 5006 (logs: make backend-logs)"
-	@echo ""
-	@echo "3/4 Starting admin UI..."
-	@docker-compose up -d admin
-	@echo "✓ Admin UI starting on port 5175 (logs: make admin-logs)"
-	@echo ""
-	@echo "4/4 Starting widget..."
-	@docker-compose up -d widget-dev
-	@echo "✓ Widget starting on port 5174 (logs: make widget-logs)"
-	@echo ""
-	@echo "=========================================="
-	@echo "✓ All services started!"
-	@echo "=========================================="
-	@echo ""
-	@echo "URLs:"
-	@echo "  Backend:  http://localhost:5006"
-	@echo "  Admin UI: http://localhost:5175"
-	@echo "  Widget:   http://localhost:5174"
-	@echo ""
-	@echo "Commands:"
-	@echo "  make logs         - Show all logs"
-	@echo "  make backend-logs - Show backend logs"
-	@echo "  make admin-logs   - Show admin UI logs"
-	@echo "  make widget-logs  - Show widget logs"
-	@echo "  make down         - Stop all services"
-	@echo ""
-
-# Stop all services
 down:
-	@echo "Stopping services..."
-	@docker-compose down
-	@echo "✓ All services stopped"
+	$(COMPOSE) down
 
-# Restart all services
-restart: down dev
-
-# Show all logs (aggregated)
 logs:
-	@mkdir -p logs
-	@echo "Aggregating logs from all services..."
-	@tail -f logs/*.log 2>/dev/null || echo "No logs available yet"
+	$(COMPOSE) logs -f $${SERVICE}
 
-# Backend logs
-backend-logs:
-	@docker-compose logs -f backend
+ps:
+	$(COMPOSE) ps
 
-# Admin UI logs
-admin-logs:
-	@docker-compose logs -f admin
+build:
+	$(COMPOSE) build
 
-# Widget logs
-widget-logs:
-	@docker-compose logs -f widget-dev
+clean:
+	@echo "⚠️  This will delete ALL containers and volumes"
+	@read -p "Continue? (yes/no): " c && [ "$$c" = "yes" ] || exit 1
+	$(COMPOSE) down -v
 
-# Database shell
+# =============================================================================
+# Database Management
+# =============================================================================
+.PHONY: db-shell db-studio db-migrate
 db-shell:
-	docker-compose exec postgres psql -U booking_user -d booking_service
+	$(COMPOSE) exec postgres psql -U booking_user -d booking_service
 
-# Drizzle Studio
 db-studio:
-	docker-compose up -d drizzle-studio
+	$(COMPOSE) up -d drizzle-studio
 	@echo "🎨 Drizzle Studio: https://local.drizzle.studio?port=4985&host=localhost"
 
-# Database migrations
 db-migrate:
-	@echo "Generating migrations..."
-	@cd backend && bun run db:generate
-	@echo ""
-	@echo "Pushing schema to database..."
+	@echo "Generating and pushing migrations..."
 	@cd backend && bunx drizzle-kit push
-	@echo "✓ Migrations applied"
+	@echo "✅ Migrations applied"
 
-# Reset database
-db-reset:
-	@echo "WARNING: This will delete all data!"
-	@read -p "Are you sure? [y/N] " -n 1 -r; \
-	echo; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		docker-compose down -v; \
-		docker-compose up -d postgres; \
-		sleep 3; \
-		cd backend && bunx drizzle-kit push; \
-		echo "✓ Database reset complete"; \
-	else \
-		echo "Cancelled"; \
-	fi
-
-# Development mode (blocking - for active development)
-backend-dev:
-	@docker-compose up backend
-
-# Start backend in background
-backend-start:
-	@docker-compose up -d backend
-	@echo "Backend started in background"
-	@echo "View logs: make backend-logs"
-
-# Backend shell
-backend-shell:
-	@docker-compose exec backend bun repl
-
-# Admin UI development mode (blocking)
-admin-dev:
-	@docker-compose up admin
-
-# Widget development mode (blocking)
-widget-dev:
-	@docker-compose up widget-dev
-
-# Logto setup
+# =============================================================================
+# Logto Management
+# =============================================================================
+.PHONY: logto-setup
 logto-setup:
-	@echo "Setting up Logto for Booking Service..."
+	@echo "⚙️  Configuring Logto for Booking Service..."
 	@node scripts/logto-booking-setup.js
 
-# Clean everything
-clean:
-	@echo "Cleaning up..."
-	@docker-compose down -v
-	@rm -rf logs/*
-	@rm -rf backend/node_modules
-	@rm -rf admin/node_modules
-	@rm -rf widget/node_modules
-	@rm -rf backend/drizzle
-	@echo "✓ Cleanup complete"
+# =============================================================================
+# Service-Specific Targets (auto-generated for each service)
+# =============================================================================
+define SERVICE_TEMPLATE
+.PHONY: $(1) $(1)-logs $(1)-rebuild
+$(1):
+	$$(COMPOSE) up -d $(1)
 
-# Install dependencies
-install:
-	@echo "Installing dependencies for all services..."
-	@echo "1/3 Backend..."
-	@cd backend && bun install
-	@echo "2/3 Admin UI..."
-	@cd admin && bun install
-	@echo "3/3 Widget..."
-	@cd widget && bun install
-	@echo "✓ All dependencies installed"
+$(1)-logs:
+	$$(COMPOSE) logs -f $(1)
 
-# Full setup from scratch
-setup: install
-	@echo "Setting up Booking Service..."
-	docker-compose up -d postgres
-	@sleep 3
-	@cd backend && bunx drizzle-kit push
-	@echo ""
-	@echo "✓ Setup complete!"
-	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Start backend: make backend-start"
-	@echo "  2. Test API: make test-api"
+$(1)-rebuild:
+	$$(COMPOSE) up -d --build $(1)
+endef
+$(foreach service,$(SERVICES),$(eval $(call SERVICE_TEMPLATE,$(service))))
