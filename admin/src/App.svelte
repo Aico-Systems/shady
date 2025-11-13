@@ -14,14 +14,14 @@
   import ConfigPage from './lib/pages/ConfigPage.svelte';
   import { t } from './i18n';
 
-  // Import from blueprint
   import {
     MainLayout,
     defineConfig,
     initializeNavigation,
     setNavigationPages,
     type AppConfig,
-    type PageDefinition
+    type PageDefinition,
+    ToastContainer
   } from '@aico/blueprint';
 
   type PageKey = 'users' | 'bookings' | 'config';
@@ -142,6 +142,7 @@
   </section>
 {:else}
   <MainLayout pages={pageDefinitions} {config} />
+  <ToastContainer />
 {/if}
 
 <style>

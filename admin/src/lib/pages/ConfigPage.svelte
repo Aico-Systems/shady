@@ -5,6 +5,7 @@
   import { canManageConfig } from '../auth';
   import { t } from '../../i18n';
   import { Copy, Settings2 } from '@lucide/svelte';
+  import { toastService } from '@aico/blueprint';
 
   let config = $state<BookingConfig | null>(null);
   let loading = $state(true);
@@ -22,7 +23,7 @@
       config = await configApi.get();
     } catch (error) {
       console.error('Failed to load config:', error);
-      alert(get(t)('pages.config.notifications.loadError'));
+      toastService.error(get(t)('pages.config.notifications.loadError'));
       config = {
         organizationId: '',
         visitorFields: [
@@ -83,10 +84,10 @@
         bufferMinutes: config.bufferMinutes,
         emailEnabled: config.emailEnabled,
       });
-      alert(get(t)('pages.config.notifications.saveSuccess'));
+      toastService.success(get(t)('pages.config.notifications.saveSuccess'));
     } catch (error) {
       console.error('Failed to save config:', error);
-      alert(get(t)('pages.config.notifications.saveError'));
+      toastService.error(get(t)('pages.config.notifications.saveError'));
     } finally {
       saving = false;
     }
@@ -98,7 +99,7 @@
 
 <ac-booking org-id="${config.bookingSlug || config.organizationId}" api-url="http://localhost:5006"></ac-booking>`;
     await navigator.clipboard.writeText(code);
-    alert(get(t)('pages.config.notifications.codeCopied'));
+    toastService.success(get(t)('pages.config.notifications.codeCopied'));
   }
 </script>
 

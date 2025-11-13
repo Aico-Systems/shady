@@ -1,3 +1,5 @@
+/* Blueprint provides core variables - imported in App.svelte */
+/* Our theme.css extends with app-specific variables */
 @import './theme.css';
 
 :root {

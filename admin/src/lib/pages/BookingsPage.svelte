@@ -5,6 +5,7 @@
   import { canManageBookings } from '../auth';
   import { t, locale } from '../../i18n';
   import { CalendarDays, Video, X } from '@lucide/svelte';
+  import { toastService } from '@aico/blueprint';
 
   let bookings = $state<BookingWithUser[]>([]);
   let loading = $state(true);
@@ -27,7 +28,7 @@
       bookings = await bookingsApi.list();
     } catch (error) {
       console.error('Failed to load bookings:', error);
-      alert(get(t)('pages.bookings.notifications.loadError'));
+      toastService.error(get(t)('pages.bookings.notifications.loadError'));
     } finally {
       loading = false;
     }
@@ -54,9 +55,9 @@
       await bookingsApi.cancel(booking.id, reason || undefined);
       await loadBookings();
       await loadStats();
-      alert(translator('pages.bookings.notifications.cancelSuccess'));
+      toastService.success(translator('pages.bookings.notifications.cancelSuccess'));
     } catch (error) {
-      alert(translator('pages.bookings.notifications.cancelError'));
+      toastService.error(translator('pages.bookings.notifications.cancelError'));
     }
   }
 

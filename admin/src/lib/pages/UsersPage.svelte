@@ -5,6 +5,7 @@
   import { canManageUsers, canConnectCalendar } from '../auth';
   import { t } from '../../i18n';
   import { Plus, CalendarRange, Link2 } from '@lucide/svelte';
+  import { toastService } from '@aico/blueprint';
 
   let users = $state<BookingUser[]>([]);
   let loading = $state(true);
@@ -37,7 +38,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('google-connected') === 'true') {
-      alert(get(t)('pages.users.notifications.googleConnected'));
+      toastService.success(get(t)('pages.users.notifications.googleConnected'));
       window.history.replaceState({}, '', window.location.pathname);
       await loadUsers();
     }
@@ -53,7 +54,7 @@
       }
     } catch (error) {
       console.error('Failed to sync current user:', error);
-      alert(get(t)('pages.users.notifications.syncError'));
+      toastService.error(get(t)('pages.users.notifications.syncError'));
     }
   }
 
@@ -62,7 +63,7 @@
       users = await usersApi.list();
     } catch (error) {
       console.error('Failed to load users:', error);
-      alert(get(t)('pages.users.notifications.loadError'));
+      toastService.error(get(t)('pages.users.notifications.loadError'));
     } finally {
       loading = false;
     }
@@ -73,7 +74,7 @@
       await usersApi.update(target.id, { isActive: !target.isActive });
       await loadUsers();
     } catch (error) {
-      alert(get(t)('pages.users.notifications.updateError'));
+      toastService.error(get(t)('pages.users.notifications.updateError'));
     }
   }
 
@@ -82,7 +83,7 @@
       const { authUrl } = await usersApi.connectGoogle(target.id);
       window.open(authUrl, '_blank', 'width=600,height=700');
     } catch (error) {
-      alert(get(t)('pages.users.notifications.connectError'));
+      toastService.error(get(t)('pages.users.notifications.connectError'));
     }
   }
 
@@ -127,9 +128,9 @@
 
       await availabilityApi.update(selectedUser.id, rules);
       showAvailabilityModal = false;
-      alert(get(t)('pages.users.notifications.availabilitySaved'));
+      toastService.success(get(t)('pages.users.notifications.availabilitySaved'));
     } catch (error) {
-      alert(get(t)('pages.users.notifications.availabilityError'));
+      toastService.error(get(t)('pages.users.notifications.availabilityError'));
     } finally {
       savingAvailability = false;
     }
@@ -142,7 +143,7 @@
 
   async function createUser() {
     if (!newUser.email || !newUser.displayName) {
-      alert(get(t)('pages.users.notifications.userCreateError'));
+      toastService.error(get(t)('pages.users.notifications.userCreateError'));
       return;
     }
 
@@ -150,10 +151,10 @@
     try {
       await usersApi.create(newUser);
       showCreateUserModal = false;
-      alert(get(t)('pages.users.notifications.userCreated'));
+      toastService.success(get(t)('pages.users.notifications.userCreated'));
       await loadUsers();
     } catch (error) {
-      alert(get(t)('pages.users.notifications.userCreateError'));
+      toastService.error(get(t)('pages.users.notifications.userCreateError'));
     } finally {
       creatingUser = false;
     }
