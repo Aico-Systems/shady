@@ -55,8 +55,8 @@ services:
     volumes:
       - ./admin/src:/app/src
       - /app/node_modules
-      - ../blueprint:/app/blueprint:ro
-      - ./.env:/workspace/.env.development:ro
+      - ../blueprint/src:/app/blueprint/src:ro
+      - ./.env:/app/.env.development:ro
     networks:
       - booking_network
     restart: unless-stopped
@@ -73,7 +73,7 @@ services:
     volumes:
       - ./widget/src:/app/src
       - /app/node_modules
-      - ./.env:/workspace/.env.development:ro
+      - ./.env:/app/.env.development:ro
     networks:
       - booking_network
     restart: unless-stopped

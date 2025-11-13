@@ -9,7 +9,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export default defineConfig(({ command }) => {
   if (command === 'build') {
     return {
-      envDir: '/workspace',
       envPrefix: 'VITE_',
       plugins: [
         // Process normal Svelte files (exclude .wc.svelte files)
@@ -52,7 +51,6 @@ export default defineConfig(({ command }) => {
 
   // Development (dev server) configuration:
   return {
-    envDir: '/workspace',
     envPrefix: 'VITE_',
     plugins: [
       svelte({
