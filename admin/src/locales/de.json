@@ -1,7 +1,7 @@
 {
   "app": {
     "meta": {
-      "title": "Aico Booking Admin",
+      "title": "AICO Buchungs Admin",
       "tagline": "Operations Konsole"
     },
     "welcome": "Willkommen zurück, {name}",

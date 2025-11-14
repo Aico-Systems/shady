@@ -32,6 +32,7 @@ help:
 	@echo "  <service>          $(SERVICES)"
 	@echo "  <service>-logs     Example: make backend-logs"
 	@echo "  <service>-rebuild  Example: make backend-rebuild"
+	@echo "  <service>-stop     Example: make backend-stop"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  build              Build all Docker images"
@@ -94,7 +95,7 @@ logto-setup:
 # Service-Specific Targets (auto-generated for each service)
 # =============================================================================
 define SERVICE_TEMPLATE
-.PHONY: $(1) $(1)-logs $(1)-rebuild
+.PHONY: $(1) $(1)-logs $(1)-rebuild $(1)-stop
 $(1):
 	$$(COMPOSE) up -d $(1)
 
@@ -103,5 +104,8 @@ $(1)-logs:
 
 $(1)-rebuild:
 	$$(COMPOSE) up -d --build $(1)
+
+$(1)-stop:
+	$$(COMPOSE) stop $(1)
 endef
 $(foreach service,$(SERVICES),$(eval $(call SERVICE_TEMPLATE,$(service))))
