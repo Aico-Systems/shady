@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.1",
-    "drizzle-kit": "^0.31.6",
+    "drizzle-kit": "^0.31.7",
     "typescript": "^5.9.3"
   }
 }
