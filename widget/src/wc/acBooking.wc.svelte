@@ -146,9 +146,9 @@ let error = $state<string | null>(null);
       error = null;
       config = await api.getConfig(orgId);
       
-      // Load available dates for the calendar
+      // Load available days for the calendar
       if (config) {
-        await loadAvailableDates();
+        await loadAvailableDays();
       }
     } catch (err: any) {
       error = err.message ?? get(t)('widget.errors.generic');
@@ -157,28 +157,28 @@ let error = $state<string | null>(null);
     }
   }
 
-  async function loadAvailableDates() {
-    if (!config) return;
+  async function loadAvailableDays() {
+    if (!orgId || !config) return;
 
     try {
-      const startDate = new Date();
-      const endDate = addDays(new Date(), config.advanceBookingDays);
-
-      const dateStrings = await api.getAvailableDates({
+      const today = new Date();
+      const maxDate = addDays(today, config.advanceBookingDays);
+      
+      const dayStrings = await api.getAvailableDays({
         orgId,
-        startDate,
-        endDate,
+        startDate: today,
+        endDate: maxDate,
         durationMinutes: config.bookingDurationMinutes,
       });
 
-      // Convert date strings (YYYY-MM-DD) to Date objects in local time
-      availableDates = dateStrings.map(dateStr => {
+      // Convert YYYY-MM-DD strings to Date objects
+      availableDates = dayStrings.map(dateStr => {
         const [year, month, day] = dateStr.split('-').map(Number);
         return new Date(year, month - 1, day);
       });
     } catch (err: any) {
-      // Don't show error to user, just log it
-      console.warn('Failed to load available dates:', err);
+      // Don't show error to user - calendar will just show all days as available
+      console.warn('Failed to load available days:', err);
       availableDates = [];
     }
   }
@@ -221,8 +221,8 @@ let error = $state<string | null>(null);
       selectedDate = null;
       selectedSlot = null;
       availableSlots = [];
-      // Reload available dates when going back to calendar
-      loadAvailableDates();
+      // Refresh available days when returning to calendar
+      loadAvailableDays();
     }
     if (step === 'time') {
       selectedSlot = null;

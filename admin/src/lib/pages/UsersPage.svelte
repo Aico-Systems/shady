@@ -5,6 +5,7 @@
   import { canManageUsers, canConnectCalendar } from '../auth';
   import { t } from '../../i18n';
   import { Plus, CalendarRange, Link2 } from '@lucide/svelte';
+  import { toastService } from '@aico/blueprint';
 
   let users = $state<BookingUser[]>([]);
   let loading = $state(true);
@@ -37,7 +38,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('google-connected') === 'true') {
-      alert(get(t)('pages.users.notifications.googleConnected'));
+      toastService.success(get(t)('pages.users.notifications.googleConnected'));
       window.history.replaceState({}, '', window.location.pathname);
       await loadUsers();
     }
@@ -53,7 +54,7 @@
       }
     } catch (error) {
       console.error('Failed to sync current user:', error);
-      alert(get(t)('pages.users.notifications.syncError'));
+      toastService.error(get(t)('pages.users.notifications.syncError'));
     }
   }
 
@@ -62,7 +63,7 @@
       users = await usersApi.list();
     } catch (error) {
       console.error('Failed to load users:', error);
-      alert(get(t)('pages.users.notifications.loadError'));
+      toastService.error(get(t)('pages.users.notifications.loadError'));
     } finally {
       loading = false;
     }
@@ -73,7 +74,7 @@
       await usersApi.update(target.id, { isActive: !target.isActive });
       await loadUsers();
     } catch (error) {
-      alert(get(t)('pages.users.notifications.updateError'));
+      toastService.error(get(t)('pages.users.notifications.updateError'));
     }
   }
 
@@ -82,7 +83,7 @@
       const { authUrl } = await usersApi.connectGoogle(target.id);
       window.open(authUrl, '_blank', 'width=600,height=700');
     } catch (error) {
-      alert(get(t)('pages.users.notifications.connectError'));
+      toastService.error(get(t)('pages.users.notifications.connectError'));
     }
   }
 
@@ -127,9 +128,9 @@
 
       await availabilityApi.update(selectedUser.id, rules);
       showAvailabilityModal = false;
-      alert(get(t)('pages.users.notifications.availabilitySaved'));
+      toastService.success(get(t)('pages.users.notifications.availabilitySaved'));
     } catch (error) {
-      alert(get(t)('pages.users.notifications.availabilityError'));
+      toastService.error(get(t)('pages.users.notifications.availabilityError'));
     } finally {
       savingAvailability = false;
     }
@@ -142,7 +143,7 @@
 
   async function createUser() {
     if (!newUser.email || !newUser.displayName) {
-      alert(get(t)('pages.users.notifications.userCreateError'));
+      toastService.error(get(t)('pages.users.notifications.userCreateError'));
       return;
     }
 
@@ -150,10 +151,10 @@
     try {
       await usersApi.create(newUser);
       showCreateUserModal = false;
-      alert(get(t)('pages.users.notifications.userCreated'));
+      toastService.success(get(t)('pages.users.notifications.userCreated'));
       await loadUsers();
     } catch (error) {
-      alert(get(t)('pages.users.notifications.userCreateError'));
+      toastService.error(get(t)('pages.users.notifications.userCreateError'));
     } finally {
       creatingUser = false;
     }
@@ -161,93 +162,99 @@
 </script>
 
 <div class="page users-page">
-  <header class="page-header">
-    <div>
-      <p class="eyebrow">{$t('navigation.users')}</p>
-      <h1>{$t('pages.users.title')}</h1>
-      <p>{$t('pages.users.subtitle')}</p>
-    </div>
-    {#if $canManageUsers}
-      <button class="btn-primary" type="button" on:click={openCreateUserModal}>
-        <Plus size={16} />
-        <span>{$t('pages.users.buttons.create')}</span>
-      </button>
-    {/if}
-  </header>
+  <div class="page-content">
+    <section class="page-surface">
+      <header class="page-header surface-toolbar">
+        <div class="surface-header">
+          <p class="eyebrow">{$t('navigation.users')}</p>
+          <h1>{$t('pages.users.title')}</h1>
+          <p>{$t('pages.users.subtitle')}</p>
+        </div>
+        {#if $canManageUsers}
+          <button class="btn-primary" type="button" on:click={openCreateUserModal}>
+            <Plus size={16} />
+            <span>{$t('pages.users.buttons.create')}</span>
+          </button>
+        {/if}
+      </header>
+    </section>
 
-  {#if loading}
-    <div class="loading">{$t('pages.users.loading')}</div>
-  {:else if users.length === 0}
-    <div class="empty-state">
-      <h3>{$t('pages.users.emptyTitle')}</h3>
-      <p>{$t('pages.users.emptyHelp')}</p>
-    </div>
-  {:else}
-    <div class="users-table">
-      <table>
-        <thead>
-          <tr>
-            <th>{$t('pages.users.table.name')}</th>
-            <th>{$t('pages.users.table.email')}</th>
-            <th>{$t('pages.users.table.calendar')}</th>
-            <th>{$t('pages.users.table.active')}</th>
-            <th>{$t('pages.users.table.actions')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each users as user}
-            <tr>
-              <td>
-                <div class="identity">
-                  <div class="avatar-sm">
-                    {user.displayName?.[0]?.toUpperCase() ?? 'U'}
-                  </div>
-                  <div>
-                    <strong>{user.displayName}</strong>
-                    <small>{user.timezone}</small>
-                  </div>
-                </div>
-              </td>
-              <td>{user.email}</td>
-              <td>
-                {#if user.hasGoogleCalendar}
-                  <span class="badge badge-success">{$t('pages.users.google.connected')}</span>
-                {:else}
-                  <span class="badge badge-default">{$t('pages.users.google.disconnected')}</span>
-                {/if}
-              </td>
-              <td>
-                <label class="toggle">
-                  <input
-                    type="checkbox"
-                    checked={user.isActive}
-                    on:change={() => toggleActive(user)}
-                    disabled={!$canManageUsers}
-                  />
-                  <span></span>
-                </label>
-              </td>
-              <td>
-                <div class="action-buttons">
-                  <button type="button" class="ghost" on:click={() => openAvailabilityEditor(user)}>
-                    <CalendarRange size={16} />
-                    <span>{$t('pages.users.buttons.availability')}</span>
-                  </button>
+    <section class="page-surface">
+      {#if loading}
+        <div class="loading">{$t('pages.users.loading')}</div>
+      {:else if users.length === 0}
+        <div class="empty-state">
+          <h3>{$t('pages.users.emptyTitle')}</h3>
+          <p>{$t('pages.users.emptyHelp')}</p>
+        </div>
+      {:else}
+        <div class="users-table">
+          <table>
+            <thead>
+              <tr>
+                <th>{$t('pages.users.table.name')}</th>
+                <th>{$t('pages.users.table.email')}</th>
+                <th>{$t('pages.users.table.calendar')}</th>
+                <th>{$t('pages.users.table.active')}</th>
+                <th>{$t('pages.users.table.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each users as user}
+                <tr>
+                  <td>
+                    <div class="identity">
+                      <div class="avatar-sm">
+                        {user.displayName?.[0]?.toUpperCase() ?? 'U'}
+                      </div>
+                      <div>
+                        <strong>{user.displayName}</strong>
+                        <small>{user.timezone}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{user.email}</td>
+                  <td>
+                    {#if user.hasGoogleCalendar}
+                      <span class="badge badge-success">{$t('pages.users.google.connected')}</span>
+                    {:else}
+                      <span class="badge badge-default">{$t('pages.users.google.disconnected')}</span>
+                    {/if}
+                  </td>
+                  <td>
+                    <label class="toggle">
+                      <input
+                        type="checkbox"
+                        checked={user.isActive}
+                        on:change={() => toggleActive(user)}
+                        disabled={!$canManageUsers}
+                      />
+                      <span></span>
+                    </label>
+                  </td>
+                  <td>
+                    <div class="surface-actions">
+                      <button type="button" class="ghost" on:click={() => openAvailabilityEditor(user)}>
+                        <CalendarRange size={16} />
+                        <span>{$t('pages.users.buttons.availability')}</span>
+                      </button>
 
-                  {#if !user.hasGoogleCalendar && $canConnectCalendar}
-                    <button type="button" class="ghost" on:click={() => connectGoogle(user)}>
-                      <Link2 size={16} />
-                      <span>{$t('pages.users.google.connect')}</span>
-                    </button>
-                  {/if}
-                </div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
+                      {#if !user.hasGoogleCalendar && $canConnectCalendar}
+                        <button type="button" class="ghost" on:click={() => connectGoogle(user)}>
+                          <Link2 size={16} />
+                          <span>{$t('pages.users.google.connect')}</span>
+                        </button>
+                      {/if}
+                    </div>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
+    </section>
+  </div>
 </div>
 
 {#if showAvailabilityModal && selectedUser}
@@ -365,131 +372,22 @@
 {/if}
 
 <style>
-  .users-page .identity {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-  }
-
-  .avatar-sm {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
-    color: white;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .action-buttons {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .ghost {
-    background: color-mix(in srgb, var(--aico-grey-300) 12%, transparent);
-    border-radius: 999px;
-    border: none;
-    padding: 0.4rem 0.85rem;
-  }
-
-  .ghost span {
-    font-weight: 600;
-  }
-
-  .toggle {
-    position: relative;
-    display: inline-block;
-    width: 46px;
-    height: 24px;
-  }
-
-  .toggle input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .toggle span {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: color-mix(in srgb, var(--aico-grey-400) 45%, transparent);
-    transition: var(--transition-transform);
-    border-radius: 999px;
-  }
-
-  .toggle span::before {
-    position: absolute;
-    content: '';
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: var(--transition-transform);
-    border-radius: 50%;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
-  }
-
-  .toggle input:checked + span {
-    background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
-  }
-
-  .toggle input:checked + span::before {
-    transform: translateX(22px);
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.25rem;
-  }
-
-  .modal-header h3 {
-    margin: 0.25rem 0 0;
-  }
-
   .availability-editor {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--component-gap);
   }
 
   .availability-row {
     display: grid;
     grid-template-columns: 1fr 1fr auto 1fr auto;
-    gap: 0.5rem;
+    gap: var(--component-gap-sm);
     align-items: center;
-  }
-
-  .icon-only {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    border: none;
-    background: rgba(var(--aico-danger-rgb), 0.1);
-    color: var(--aico-danger);
-    font-weight: 700;
   }
 
   .form-stack {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-  }
-
-  .modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    gap: var(--component-gap);
   }
 </style>

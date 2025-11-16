@@ -7,7 +7,7 @@
   import { themeStore, type Theme } from './lib/stores/theme';
   import { onDestroy } from 'svelte';
 
-  let orgId = $state('org-0jny1pbq');
+  let orgId = $state('org-c0giv3tx');
   let apiUrl = $state('http://localhost:5006');
   let previewTheme = $state<Theme>('auto');
 

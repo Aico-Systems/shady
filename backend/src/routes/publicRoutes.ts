@@ -20,9 +20,9 @@ export async function handlePublicRoutes(request: Request, url: URL): Promise<Re
       return await handleGetAvailability(url);
     }
 
-    // GET /api/public/available-dates
-    if (path === '/api/public/available-dates' && method === 'GET') {
-      return await handleGetAvailableDates(url);
+    // GET /api/public/available-days
+    if (path === '/api/public/available-days' && method === 'GET') {
+      return await handleGetAvailableDays(url);
     }
 
     // POST /api/public/bookings
@@ -91,11 +91,18 @@ async function handleGetAvailability(url: URL): Promise<Response> {
 }
 
 /**
+<<<<<<< HEAD
  * GET /api/public/available-dates
  * Get a list of dates that have at least one available slot
  * Used by the calendar widget to grey out unavailable days
  */
 async function handleGetAvailableDates(url: URL): Promise<Response> {
+=======
+ * GET /api/public/available-days
+ * Get dates that have at least one available slot
+ */
+async function handleGetAvailableDays(url: URL): Promise<Response> {
+>>>>>>> 446746b
   let orgIdentifier = url.searchParams.get('orgId');
   const startDate = url.searchParams.get('startDate');
   const endDate = url.searchParams.get('endDate');
@@ -115,7 +122,11 @@ async function handleGetAvailableDates(url: URL): Promise<Response> {
       orgId = config.organizationId;
     }
 
+<<<<<<< HEAD
     const dates = await availabilityService.getAvailableDates({
+=======
+    const availableDays = await availabilityService.getAvailableDays({
+>>>>>>> 446746b
       organizationId: orgId,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
@@ -124,10 +135,17 @@ async function handleGetAvailableDates(url: URL): Promise<Response> {
 
     return jsonResponse({
       success: true,
+<<<<<<< HEAD
       data: dates
     });
   } catch (error: any) {
     logger.error('Failed to get available dates', { error, orgIdentifier });
+=======
+      data: availableDays
+    });
+  } catch (error: any) {
+    logger.error('Failed to get available days', { error, orgIdentifier });
+>>>>>>> 446746b
     return errorResponse(error.message, 500);
   }
 }

@@ -113,10 +113,10 @@ export class BookingApi {
   }
 
   /**
-   * Get a list of dates that have at least one available slot
-   * Used to grey out unavailable days in the calendar
+   * Get available days within a date range
+   * Returns an array of date strings (YYYY-MM-DD) that have at least one available slot
    */
-  async getAvailableDates(params: {
+  async getAvailableDays(params: {
     orgId: string;
     startDate: Date;
     endDate: Date;
@@ -129,10 +129,10 @@ export class BookingApi {
       ...(params.durationMinutes && { durationMinutes: params.durationMinutes.toString() })
     });
 
-    const response = await fetch(`${this.baseUrl}/api/public/available-dates?${query}`);
+    const response = await fetch(`${this.baseUrl}/api/public/available-days?${query}`);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch available dates: ${response.statusText}`);
+      throw new Error(`Failed to fetch available days: ${response.statusText}`);
     }
 
     const data = await response.json();
