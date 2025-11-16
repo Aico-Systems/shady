@@ -260,7 +260,7 @@ let error = $state<string | null>(null);
     notes = '';
     error = null;
     // Reload available dates when closing
-    loadAvailableDates();
+    loadAvailableDays();
   }
 
   const stepOrder: Step[] = ['calendar', 'time', 'form', 'confirmation'];
