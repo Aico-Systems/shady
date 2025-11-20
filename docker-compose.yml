@@ -9,8 +9,8 @@ services:
       POSTGRES_USER: booking_user
       POSTGRES_PASSWORD: booking_password
     volumes:
-      - booking_postgres_data:/var/lib/postgresql/data
-      - ./backend/src/db/init:/docker-entrypoint-initdb.d:ro
+      - shady_postgres_data:/var/lib/postgresql/data
+      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_service"]
       interval: 10s
