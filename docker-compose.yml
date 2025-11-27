@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: booking_password
     volumes:
       - shady_postgres_data:/var/lib/postgresql/data
-      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./backend/src/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_service"]
       interval: 10s
@@ -101,7 +101,7 @@ services:
     restart: "no"
 
 volumes:
-  booking_postgres_data:
+  shady_postgres_data:
   drizzle_studio_workspace:
 
 networks:
