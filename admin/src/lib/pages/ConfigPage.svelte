@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { configApi, type BookingConfig } from '../api';
-  import { canManageConfig } from '../auth';
+  import { canManageConfig } from '../permissions';
   import { t } from '../../i18n';
   import { Copy, Settings2 } from '@lucide/svelte';
   import { toastService } from '@aico/blueprint';

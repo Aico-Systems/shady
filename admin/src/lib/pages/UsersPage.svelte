@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { usersApi, availabilityApi, type BookingUser, type AvailabilityRule } from '../api';
-  import { canManageUsers, canConnectCalendar } from '../auth';
+  import { canManageUsers, canConnectCalendar } from '../permissions';
   import { t } from '../../i18n';
   import { Plus, CalendarRange, Link2 } from '@lucide/svelte';
   import { toastService } from '@aico/blueprint';

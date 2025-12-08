@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { bookingsApi, type BookingWithUser } from '../api';
-  import { canManageBookings } from '../auth';
+  import { canManageBookings } from '../permissions';
   import { t, locale } from '../../i18n';
   import { CalendarDays, Video, X } from '@lucide/svelte';
   import { toastService } from '@aico/blueprint';
