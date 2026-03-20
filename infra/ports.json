@@ -1,0 +1,99 @@
+{
+  "hosts": {
+    "loopback": "127.0.0.1",
+    "bind_all": "0.0.0.0"
+  },
+  "containers": {
+    "shady-db": {
+      "image": "pgvector/pgvector:pg17",
+      "port": 5432,
+      "expose": "127.0.0.1:5432:5432"
+    },
+    "shady-backend": {
+      "port": 8000,
+      "health": "/health"
+    },
+    "shady-admin": {
+      "port": 3000
+    },
+    "shady-widget": {
+      "port": 3001
+    }
+  },
+  "routing": {
+    "admin": {
+      "port": 3000,
+      "target": "shady-admin"
+    },
+    "api": {
+      "port": 8000,
+      "target": "shady-backend"
+    },
+    "widget": {
+      "port": 3001,
+      "target": "shady-widget"
+    },
+    "deploy": {
+      "port": 9090,
+      "target": "deploy-webhook"
+    }
+  },
+  "env": {
+    "dev": {
+      "DOMAIN_ADMIN": "localhost:5175",
+      "DOMAIN_API": "localhost:5006",
+      "DOMAIN_WIDGET": "localhost:5174",
+
+      "BACKEND_PORT": 5006,
+      "ADMIN_PORT": 5175,
+      "WIDGET_PORT": 5174,
+
+      "POSTGRES_USER": "booking_user",
+      "POSTGRES_DB": "booking_service",
+      "POSTGRES_HOST_PORT": 5436,
+
+      "LOGTO_ENDPOINT": "http://localhost:3001",
+      "LOGTO_ISSUER": "http://localhost:3001/oidc",
+      "LOGTO_API_RESOURCE": "https://api.booking-service.local",
+
+      "VITE_BACKEND_URL": "http://localhost:5006",
+      "VITE_LOGTO_ENDPOINT": "http://localhost:3001",
+      "VITE_LOGTO_API_RESOURCE": "https://api.booking-service.local",
+      "VITE_WIDGET_URL": "http://localhost:5174",
+
+      "BACKEND_URL": "http://localhost:5006",
+      "ADMIN_URL": "http://localhost:5175",
+      "WIDGET_URL": "http://localhost:5174",
+
+      "GOOGLE_REDIRECT_URI": "http://localhost:5006/api/admin/google/callback"
+    },
+    "prod": {
+      "DOMAIN_ADMIN": "shady.aicoflow.com",
+      "DOMAIN_API": "api.shady.aicoflow.com",
+      "DOMAIN_WIDGET": "widget.shady.aicoflow.com",
+      "DOMAIN_DEPLOY": "deploy.shady.aicoflow.com",
+
+      "BACKEND_PORT": 8000,
+      "ADMIN_PORT": 3000,
+      "WIDGET_PORT": 3001,
+
+      "POSTGRES_USER": "booking_user",
+      "POSTGRES_DB": "booking_service",
+
+      "LOGTO_ENDPOINT": "https://auth.aicoflow.com",
+      "LOGTO_ISSUER": "https://auth.aicoflow.com/oidc",
+      "LOGTO_API_RESOURCE": "https://api.booking-service.local",
+
+      "VITE_BACKEND_URL": "https://api.shady.aicoflow.com",
+      "VITE_LOGTO_ENDPOINT": "https://auth.aicoflow.com",
+      "VITE_LOGTO_API_RESOURCE": "https://api.booking-service.local",
+      "VITE_WIDGET_URL": "https://widget.shady.aicoflow.com",
+
+      "BACKEND_URL": "https://api.shady.aicoflow.com",
+      "ADMIN_URL": "https://shady.aicoflow.com",
+      "WIDGET_URL": "https://widget.shady.aicoflow.com",
+
+      "GOOGLE_REDIRECT_URI": "https://api.shady.aicoflow.com/api/admin/google/callback"
+    }
+  }
+}

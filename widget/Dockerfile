@@ -1,19 +1,19 @@
-FROM oven/bun:latest
-
+FROM oven/bun:latest AS builder
 WORKDIR /app
 
-# Copy package files
-COPY package*.json bun.lock* ./
-
-# Install dependencies with Bun
+# Install dependencies
+COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
-# Copy source files
+# Copy source
 COPY . .
 
-# Expose Vite dev server port
-EXPOSE 5174
+# Build IIFE widget bundle
+RUN bun run build
 
-# Run Vite dev server (for development)
-# For production, use: bun run build && bun run preview
-CMD ["bun", "run", "dev"]
+FROM oven/bun:latest
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+
+# Serve static widget files
+CMD ["sh", "-c", "bun x serve -s dist -l ${WIDGET_PORT:-3001}"]

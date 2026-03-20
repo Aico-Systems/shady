@@ -1,2 +1,16 @@
 .env
 google.json
+
+# Generated config files
+.env.*.generated
+deploy/Caddyfile
+deploy/docker-compose.registry.yml
+deploy/docker-compose.caddy.yml
+deploy/.env.*.generated
+
+# Node
+node_modules/
+dist/
+
+# OS
+.DS_Store

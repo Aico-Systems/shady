@@ -88,8 +88,8 @@ db-migrate:
 # =============================================================================
 .PHONY: logto-setup
 logto-setup:
-	@echo "⚙️  Configuring Logto for Booking Service..."
-	@node scripts/logto-booking-setup.js
+	@echo "⚙️  Configuring shared Logto for AICO + Shady..."
+	@$(MAKE) -C .. auth-setup
 
 # =============================================================================
 # Service-Specific Targets (auto-generated for each service)

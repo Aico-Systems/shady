@@ -1,10 +1,11 @@
+import { S } from "@aico/blueprint";
+
 export const BOOKING_SCOPES = {
-	BOOKINGS_WRITE: "bookings:write",
-	BOOKINGS_DELETE: "bookings:delete",
-	USERS_WRITE: "users:write",
-	USERS_AVAILABILITY: "users:availability",
-	CALENDAR_CONNECT: "calendar:connect",
-	CONFIG_WRITE: "config:write",
+	BOOKINGS_READ: S.BOOKINGS_READ,
+	BOOKINGS_WRITE: S.BOOKINGS_WRITE,
+	MANAGE_USERS: S.BOOKINGS_MANAGE_USERS,
+	MANAGE_CONFIG: S.BOOKINGS_MANAGE_CONFIG,
+	CONNECT_CALENDAR: S.BOOKINGS_CONNECT_CALENDAR,
 } as const;
 
 export const ALL_BOOKING_SCOPES = Object.values(BOOKING_SCOPES);

@@ -43,7 +43,7 @@ export const config = {
   LOGTO_ENDPOINT: getEnv('LOGTO_ENDPOINT'),
   LOGTO_ISSUER: getEnv('LOGTO_ISSUER'),
   LOGTO_JWKS_URL: getEnvOptional('LOGTO_JWKS_URL', `${getEnv('LOGTO_ENDPOINT')}/oidc/jwks`),
-  LOGTO_API_RESOURCE: getEnvOptional('LOGTO_API_RESOURCE', 'https://api.booking-service.local'),
+  LOGTO_API_RESOURCE: getEnvOptional('LOGTO_API_RESOURCE', 'https://api.aico.local'),
   LOGTO_MANAGEMENT_APP_ID: getEnvOptional('LOGTO_MANAGEMENT_APP_ID', ''),
   LOGTO_MANAGEMENT_APP_SECRET: getEnvOptional('LOGTO_MANAGEMENT_APP_SECRET', ''),
 

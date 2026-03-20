@@ -8,6 +8,7 @@ import { googleCalendarService } from '../services/GoogleCalendarService';
 import { bookingService } from '../services/BookingService';
 import { config } from '../config';
 import type { UpdateAvailabilityRequest, UpdateBookingConfigRequest } from '../types';
+import { BOOKING_SCOPES, hasAnyScope } from '../utils/bookingScopes';
 
 const logger = getLogger('adminRoutes');
 
@@ -29,30 +30,48 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
   try {
     // Sync current user - auto-create booking user from Logto user
     if (path === '/api/admin/users/sync' && method === 'POST') {
+      const denied = requireScopes(userContext, [
+        BOOKING_SCOPES.READ,
+        BOOKING_SCOPES.MANAGE_USERS,
+        BOOKING_SCOPES.MANAGE_CONFIG,
+        BOOKING_SCOPES.CONNECT_CALENDAR,
+        BOOKING_SCOPES.WRITE,
+      ]);
+      if (denied) return denied;
       return await handleSyncCurrentUser(userContext);
     }
 
     // Users management
     if (path === '/api/admin/users' && method === 'GET') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.READ]);
+      if (denied) return denied;
       return await handleGetUsers(userContext.organizationId);
     }
 
     if (path === '/api/admin/users' && method === 'POST') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.MANAGE_USERS]);
+      if (denied) return denied;
       return await handleCreateUser(request, userContext.organizationId, userContext.id);
     }
 
     // User details
     const userMatch = path.match(/^\/api\/admin\/users\/([^\/]+)$/);
     if (userMatch && method === 'GET') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.READ]);
+      if (denied) return denied;
       return await handleGetUser(userMatch[1], userContext.organizationId);
     }
 
     if (userMatch && method === 'PUT') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.MANAGE_USERS]);
+      if (denied) return denied;
       return await handleUpdateUser(request, userMatch[1], userContext.organizationId);
     }
 
     // Google Calendar connection
     if (path.match(/^\/api\/admin\/users\/([^\/]+)\/google-connect$/) && method === 'POST') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.CONNECT_CALENDAR]);
+      if (denied) return denied;
       const userId = path.match(/^\/api\/admin\/users\/([^\/]+)\/google-connect$/)![1];
       return await handleGoogleConnect(userId, userContext.organizationId);
     }
@@ -60,34 +79,48 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
     // Availability management
     const availMatch = path.match(/^\/api\/admin\/users\/([^\/]+)\/availability$/);
     if (availMatch && method === 'GET') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.READ]);
+      if (denied) return denied;
       return await handleGetAvailability(availMatch[1], userContext.organizationId);
     }
 
     if (availMatch && method === 'PUT') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.MANAGE_USERS]);
+      if (denied) return denied;
       return await handleUpdateAvailability(request, availMatch[1], userContext.organizationId);
     }
 
     // Bookings management
     if (path === '/api/admin/bookings' && method === 'GET') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.READ]);
+      if (denied) return denied;
       return await handleGetBookings(url, userContext.organizationId);
     }
 
     const cancelMatch = path.match(/^\/api\/admin\/bookings\/([^\/]+)\/cancel$/);
     if (cancelMatch && method === 'PUT') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.WRITE]);
+      if (denied) return denied;
       return await handleCancelBooking(request, cancelMatch[1], userContext.organizationId);
     }
 
     // Booking stats
     if (path === '/api/admin/bookings/stats' && method === 'GET') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.READ]);
+      if (denied) return denied;
       return await handleGetBookingStats(userContext.organizationId);
     }
 
     // Configuration
     if (path === '/api/admin/config' && method === 'GET') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.READ]);
+      if (denied) return denied;
       return await handleGetConfig(userContext.organizationId);
     }
 
     if (path === '/api/admin/config' && method === 'PUT') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.MANAGE_CONFIG]);
+      if (denied) return denied;
       return await handleUpdateConfig(request, userContext.organizationId);
     }
 
@@ -96,6 +129,14 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
     logger.error('Admin route error', { error: error.message, path });
     return errorResponse(error.message || 'Internal server error', 500);
   }
+}
+
+function requireScopes(userContext: any, scopes: readonly string[]): Response | null {
+  if (hasAnyScope(userContext, scopes)) {
+    return null;
+  }
+
+  return errorResponse(`Missing required scope. Expected one of: ${scopes.join(', ')}`, 403);
 }
 
 // POST /api/admin/users/sync - Sync current Logto user to booking database

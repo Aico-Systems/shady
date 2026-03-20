@@ -1,0 +1,170 @@
+#cloud-config
+# =============================================================================
+# Shady Server Provisioning (cloud-init)
+# =============================================================================
+# Minimal server setup for Shady deployment.
+# This only installs base dependencies and creates the deploy user.
+# The actual deployment is triggered by: shady-deploy setup <env> <doppler-token>
+#
+# Usage:
+#   - Hetzner: Paste into "Cloud config" field when creating server
+#   - DigitalOcean: Paste into "User data" field
+#   - AWS: Use as EC2 user-data
+#
+# After server boots:
+#   ssh root@<server-ip>
+#   shady-deploy setup prod dp.sa.xxxx
+# =============================================================================
+
+# Create deploy user with sudo access
+users:
+  - default
+  - name: deploy
+    groups: [docker, sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+write_files:
+  # Docker daemon config
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        },
+        "storage-driver": "overlay2"
+      }
+
+  # Bootstrap script — delegates to repo agent if available, otherwise handles setup
+  - path: /usr/local/bin/shady-deploy
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      AGENT="/opt/shady/deploy/scripts/deploy-agent.sh"
+      if [[ ! -f "$AGENT" ]]; then
+          if [[ "${1:-}" != "setup" ]]; then
+              echo "Shady not installed yet. Run: shady-deploy setup <env> <doppler-token>"
+              exit 1
+          fi
+          # First run: agent not yet available, do inline bootstrap
+          ENV="${2:-}"
+          TOKEN="${3:-}"
+          if [[ -z "$ENV" || -z "$TOKEN" ]]; then
+              echo "Usage: shady-deploy setup <env> <doppler-token>"
+              exit 1
+          fi
+          # Map env to Doppler config and git branch
+          case "$ENV" in
+              prod) DOPPLER_CONFIG="prd"; BRANCH="main" ;;
+              dev)  DOPPLER_CONFIG="dev"; BRANCH="main" ;;
+              *)    echo "Unknown env: $ENV"; exit 1 ;;
+          esac
+          # Fetch PAT from Doppler to clone repo
+          PAT=$(doppler secrets get DEPLOY_GITHUB_PAT --plain \
+              --project shady --config "$DOPPLER_CONFIG" --token "$TOKEN")
+          git clone --branch "$BRANCH" \
+              "https://x-access-token:${PAT}@github.com/Aico-Systems/shady.git" /opt/shady
+          # Now delegate to the real agent
+          exec "$AGENT" "$@"
+      fi
+      exec "$AGENT" "$@"
+
+  # Systemd service for manual deploys (oneshot)
+  - path: /etc/systemd/system/shady-deploy.service
+    content: |
+      [Unit]
+      Description=Shady Deploy Agent
+      After=network-online.target docker.service
+
+      [Service]
+      Type=oneshot
+      Environment=HOME=/root
+      ExecStart=/usr/local/bin/shady-deploy deploy
+      StandardOutput=journal
+      StandardError=journal
+      SyslogIdentifier=shady-deploy
+
+  # Systemd service for deploy webhook listener (long-running Bun HTTP server)
+  - path: /etc/systemd/system/shady-deploy-webhook.service
+    content: |
+      [Unit]
+      Description=Shady Deploy Webhook Listener
+      After=network-online.target
+
+      [Service]
+      Type=simple
+      Environment=HOME=/root
+      ExecStart=/usr/local/bin/bun /opt/shady/deploy/scripts/deploy-webhook.ts
+      Restart=always
+      RestartSec=5
+      StandardOutput=journal
+      StandardError=journal
+      SyslogIdentifier=shady-deploy-webhook
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  # Wait for system clock to sync (VMs may boot with RTC at epoch)
+  - |
+    if [ "$(date +%Y)" -lt 2025 ]; then
+      echo "Clock is at $(date), waiting for NTP sync..."
+      for i in $(seq 1 60); do
+        [ "$(date +%Y)" -ge 2025 ] && break
+        sleep 1
+      done
+      echo "Clock synced to $(date)"
+    fi
+
+  # Install system packages
+  - apt-get update -y
+  - DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 python3 jq git curl unzip rsync htop vim
+
+  # Fix DNS for Docker BuildKit
+  - ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+
+  # Enable and start Docker
+  - systemctl enable docker
+  - systemctl start docker
+
+  # Install Node.js 22
+  - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  - apt-get install -y nodejs
+
+  # Install Bun + Doppler CLI
+  - |
+    export HOME=/root
+    curl -fsSL https://bun.sh/install | bash
+    ln -sf /root/.bun/bin/bun /usr/local/bin/bun
+    curl -Ls https://cli.doppler.com/install.sh | sh
+
+  # Configure firewall
+  - |
+    if command -v ufw >/dev/null 2>&1; then
+      ufw default deny incoming
+      ufw default allow outgoing
+      ufw allow 22/tcp
+      ufw allow 80/tcp
+      ufw allow 443/tcp
+      ufw --force enable
+    fi
+
+  # Create /opt/shady directory
+  - mkdir -p /opt/shady
+  - chown deploy:deploy /opt/shady
+
+  # Load systemd units
+  - systemctl daemon-reload
+
+final_message: |
+  Shady server provisioning complete.
+
+  Next step — SSH in and run:
+    shady-deploy setup <env> <doppler-token>
+
+  Example:
+    shady-deploy setup prod dp.sa.xxxx

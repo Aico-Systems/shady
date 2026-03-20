@@ -1,23 +1,23 @@
-import { derived } from 'svelte/store';
-import { userScopes } from '@aico/blueprint';
+import { derived, readable } from 'svelte/store';
+import { getLogtoAuth } from '@aico/blueprint';
 import { BOOKING_SCOPES } from './scopes';
 
-export const canManageBookings = derived(userScopes, $userScopes =>
-  $userScopes.includes(BOOKING_SCOPES.BOOKINGS_WRITE) || $userScopes.includes(BOOKING_SCOPES.BOOKINGS_DELETE)
-);
+function createScopeStore(scope: string) {
+  return readable(false, (set) => {
+    const { isSuperAdmin, userScopes } = getLogtoAuth();
 
-export const canManageUsers = derived(userScopes, $userScopes =>
-  $userScopes.includes(BOOKING_SCOPES.USERS_WRITE)
-);
+    return derived([isSuperAdmin, userScopes], ([$isSuperAdmin, $userScopes]) =>
+      $isSuperAdmin || $userScopes.includes(scope)
+    ).subscribe(set);
+  });
+}
 
-export const canManageAvailability = derived(userScopes, $userScopes =>
-  $userScopes.includes(BOOKING_SCOPES.USERS_AVAILABILITY)
-);
+export const canManageBookings = createScopeStore(BOOKING_SCOPES.BOOKINGS_WRITE);
 
-export const canConnectCalendar = derived(userScopes, $userScopes =>
-  $userScopes.includes(BOOKING_SCOPES.CALENDAR_CONNECT)
-);
+export const canManageUsers = createScopeStore(BOOKING_SCOPES.MANAGE_USERS);
 
-export const canManageConfig = derived(userScopes, $userScopes =>
-  $userScopes.includes(BOOKING_SCOPES.CONFIG_WRITE)
-);
+export const canManageAvailability = createScopeStore(BOOKING_SCOPES.MANAGE_USERS);
+
+export const canConnectCalendar = createScopeStore(BOOKING_SCOPES.CONNECT_CALENDAR);
+
+export const canManageConfig = createScopeStore(BOOKING_SCOPES.MANAGE_CONFIG);

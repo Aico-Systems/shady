@@ -1,0 +1,11 @@
+FROM oven/bun:latest
+WORKDIR /app
+
+# Install deps once; source is bind-mounted in local dev.
+COPY blueprint/package.json blueprint/bun.lock blueprint/tsconfig.json ./blueprint/
+COPY shady/admin/package.json shady/admin/bun.lock* ./
+RUN bun install --frozen-lockfile
+
+EXPOSE 5175
+
+CMD ["bun", "run", "dev", "--host", "0.0.0.0", "--port", "5175"]
