@@ -74,6 +74,42 @@
   --aico-color-border-medium: var(--brand-slate-300);
   --aico-color-border-dark: var(--brand-slate-500);
 
+  --widget-surface-base: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand-slate-50) 98%, white),
+    color-mix(in srgb, var(--brand-slate-100) 94%, var(--brand-mint) 6%)
+  );
+  --widget-surface-panel: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--brand-slate-50) 96%, white),
+    color-mix(in srgb, var(--brand-slate-100) 92%, var(--brand-petrol) 8%)
+  );
+  --widget-surface-panel-strong: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--brand-slate-100) 96%, white),
+    color-mix(in srgb, var(--brand-slate-200) 92%, var(--brand-petrol) 8%)
+  );
+  --widget-surface-field: color-mix(in srgb, white 82%, var(--brand-slate-100));
+  --widget-surface-ghost: color-mix(in srgb, white 72%, var(--brand-slate-100) 28%);
+  --widget-border-subtle: color-mix(in srgb, var(--brand-slate-200) 84%, transparent);
+  --widget-border-strong: color-mix(in srgb, var(--brand-petrol) 24%, var(--brand-slate-300));
+  --widget-text-heading: var(--brand-slate-950);
+  --widget-text-body: var(--brand-slate-700);
+  --widget-text-muted: var(--brand-slate-500);
+  --widget-text-accent: var(--brand-mint);
+  --widget-text-danger: var(--aico-danger);
+  --widget-button-primary-text: var(--brand-slate-50);
+  --widget-button-secondary-text: var(--brand-slate-800);
+  --widget-overlay-text: var(--brand-slate-50);
+  --widget-focus-ring: rgba(var(--accent-color-primary-rgb), 0.2);
+  --widget-radius-sm: 16px;
+  --widget-radius-md: 22px;
+  --widget-radius-lg: 32px;
+  --widget-control-height: 46px;
+  --widget-shadow-card: 0 24px 60px rgba(var(--brand-midnight-rgb), 0.12);
+  --widget-shadow-float: 0 18px 36px rgba(var(--brand-midnight-rgb), 0.14);
+  --widget-shadow-glow: 0 0 0 1px rgba(var(--brand-signal-rgb), 0.08), 0 36px 90px rgba(var(--brand-midnight-rgb), 0.18);
+
   --surface-gradient: linear-gradient(135deg, var(--brand-midnight), var(--brand-petrol));
   --surface-gradient-soft: linear-gradient(
     135deg,
@@ -130,4 +166,38 @@
   --aico-color-border-light: color-mix(in srgb, var(--brand-petrol) 35%, var(--brand-slate-800));
   --aico-color-border-medium: color-mix(in srgb, var(--brand-petrol) 50%, var(--brand-slate-700));
   --aico-color-border-dark: var(--brand-slate-500);
+
+  --widget-surface-base: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand-slate-900) 88%, var(--brand-midnight) 12%),
+    color-mix(in srgb, var(--brand-slate-950) 90%, var(--brand-petrol) 10%)
+  );
+  --widget-surface-panel: linear-gradient(
+    160deg,
+    rgba(11, 18, 38, 0.94),
+    rgba(15, 23, 42, 0.96) 58%,
+    rgba(20, 91, 122, 0.24) 140%
+  );
+  --widget-surface-panel-strong: linear-gradient(
+    160deg,
+    rgba(10, 16, 34, 0.98),
+    rgba(14, 22, 38, 0.98) 50%,
+    rgba(20, 91, 122, 0.14) 135%
+  );
+  --widget-surface-field: color-mix(in srgb, var(--brand-midnight) 86%, black 14%);
+  --widget-surface-ghost: color-mix(in srgb, var(--brand-slate-900) 82%, var(--brand-petrol) 18%);
+  --widget-border-subtle: rgba(71, 108, 140, 0.34);
+  --widget-border-strong: rgba(94, 234, 212, 0.22);
+  --widget-text-heading: var(--brand-slate-50);
+  --widget-text-body: var(--brand-slate-300);
+  --widget-text-muted: var(--brand-slate-400);
+  --widget-text-accent: var(--brand-mint);
+  --widget-text-danger: rgb(252, 165, 165);
+  --widget-button-primary-text: var(--brand-slate-50);
+  --widget-button-secondary-text: var(--brand-slate-50);
+  --widget-overlay-text: var(--brand-slate-50);
+  --widget-focus-ring: rgba(var(--accent-color-primary-rgb), 0.18);
+  --widget-shadow-card: 0 28px 80px rgba(2, 6, 23, 0.42);
+  --widget-shadow-float: 0 18px 40px rgba(2, 6, 23, 0.36);
+  --widget-shadow-glow: 0 0 0 1px rgba(var(--brand-signal-rgb), 0.08), 0 30px 80px rgba(2, 6, 23, 0.52);
 }

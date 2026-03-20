@@ -399,31 +399,35 @@
     width: 100%;
     max-width: 520px;
     margin: 0 auto;
-    border-radius: 32px;
+    border-radius: var(--widget-radius-lg);
     padding: 2rem;
-    background: color-mix(in srgb, var(--aico-color-bg-primary) 96%, transparent);
-    border: 1px solid color-mix(in srgb, var(--aico-color-border-light) 80%, transparent);
-    box-shadow: 0 40px 80px rgba(15, 23, 42, 0.18);
+    background: var(--widget-surface-base);
+    border: 1px solid var(--widget-border-subtle);
+    box-shadow: var(--widget-shadow-glow);
     position: relative;
     overflow: hidden;
-    color: var(--aico-color-text-primary);
+    color: var(--widget-text-body);
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.35rem;
     isolation: isolate;
+    backdrop-filter: blur(14px);
+    line-height: 1.5;
   }
 
   .booking-widget::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 15% 0%, rgba(var(--brand-signal-rgb), 0.16), transparent 55%);
-    opacity: 0.9;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(var(--brand-signal-rgb), 0.18), transparent 42%),
+      radial-gradient(circle at 100% 0%, rgba(var(--brand-petrol-rgb), 0.2), transparent 46%);
+    opacity: 0.85;
     pointer-events: none;
   }
 
   .widget-header {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.1rem;
     position: relative;
     z-index: 1;
   }
@@ -431,46 +435,58 @@
   .booking-widget button {
     font: inherit;
     line-height: 1.2;
-    color: var(--aico-color-text-primary);
+    color: inherit;
+    appearance: none;
   }
 
   .eyebrow {
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-size: 0.75rem;
-    color: var(--aico-color-text-tertiary);
+    letter-spacing: 0.18em;
+    font-size: 0.73rem;
+    color: var(--widget-text-muted);
     margin: 0;
+    font-weight: 600;
   }
 
   .widget-header h2 {
     margin: 0.2rem 0 0;
-    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    font-size: clamp(1.45rem, 3vw, 1.85rem);
+    line-height: 1.05;
+    color: var(--widget-text-heading);
+    letter-spacing: -0.03em;
   }
 
   .stepper {
     display: flex;
-    gap: 0.4rem;
-    margin-bottom: 0.65rem;
+    gap: 0.55rem;
+    margin-bottom: 0.9rem;
   }
 
   .step {
     flex: 1;
-    height: 4px;
+    height: 5px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--aico-color-border-light) 80%, transparent);
+    background: color-mix(in srgb, var(--widget-border-subtle) 88%, transparent);
     position: relative;
+    overflow: hidden;
   }
 
   .step.done,
   .step.active {
-    background: var(--surface-gradient);
+    background:
+      linear-gradient(90deg, rgba(var(--brand-signal-rgb), 0.16), rgba(var(--brand-signal-rgb), 0)),
+      var(--surface-gradient);
   }
 
   .error-banner {
-    border-radius: 16px;
-    padding: 0.75rem 1rem;
-    background: color-mix(in srgb, rgba(var(--aico-danger-rgb), 0.18), transparent);
-    border: 1px solid color-mix(in srgb, rgba(var(--aico-danger-rgb), 0.45), transparent);
+    border-radius: 18px;
+    padding: 0.9rem 1rem;
+    background: linear-gradient(
+      135deg,
+      rgba(var(--aico-danger-rgb), 0.18),
+      rgba(var(--brand-midnight-rgb), 0.32)
+    );
+    border: 1px solid rgba(var(--aico-danger-rgb), 0.34);
     font-size: 0.9rem;
     display: flex;
     justify-content: space-between;
@@ -482,7 +498,7 @@
   .error-banner button {
     border: none;
     background: transparent;
-    color: var(--aico-danger);
+    color: var(--widget-text-danger);
     cursor: pointer;
     font-weight: 600;
   }
@@ -490,77 +506,88 @@
   .widget-body {
     min-height: 320px;
     position: relative;
+    z-index: 1;
   }
 
   .time-pane header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.15rem;
+    gap: 1rem;
   }
 
   .selected-date {
     font-weight: 600;
+    color: var(--widget-text-heading);
+    text-align: right;
+    letter-spacing: -0.02em;
   }
 
   .time-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.75rem;
+    gap: 0.9rem;
   }
 
   .summary-card {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 1rem;
-    border-radius: 18px;
-    border: 1px solid var(--aico-color-border-light);
-    padding: 1rem;
-    margin-bottom: 1.2rem;
-    background: color-mix(in srgb, var(--aico-color-bg-secondary) 70%, transparent);
+    border-radius: var(--widget-radius-md);
+    border: 1px solid var(--widget-border-strong);
+    padding: 1.15rem 1.2rem;
+    margin-bottom: 1.35rem;
+    background: var(--widget-surface-panel);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   .summary-card .label {
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--aico-color-text-tertiary);
+    color: var(--widget-text-muted);
   }
 
   .summary-card strong {
     display: block;
     margin-top: 0.35rem;
+    color: var(--widget-text-heading);
+    line-height: 1.35;
   }
 
   .ghost {
-    border: 1px solid color-mix(in srgb, var(--aico-color-border-light) 80%, transparent);
+    border: 1px solid var(--widget-border-subtle);
     border-radius: 999px;
-    padding: 0.35rem 0.85rem;
-    background: color-mix(in srgb, var(--aico-color-bg-secondary) 70%, transparent);
+    padding: 0.55rem 1rem;
+    min-height: var(--widget-control-height);
+    background: var(--widget-surface-ghost);
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition-button);
+    color: var(--widget-button-secondary-text);
   }
 
   .ghost:hover {
-    border-color: color-mix(in srgb, var(--accent-color-primary) 35%, var(--aico-color-border-light));
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    border-color: var(--widget-border-strong);
+    box-shadow: var(--widget-shadow-float);
+    transform: translateY(-1px);
   }
 
   .ghost:focus-visible {
-    outline: 2px solid rgba(var(--accent-color-primary-rgb), 0.5);
+    outline: 2px solid var(--widget-focus-ring);
     outline-offset: 2px;
   }
 
   .loading-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.4);
+    background: rgba(2, 6, 23, 0.48);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--widget-overlay-text);
     gap: 0.5rem;
     backdrop-filter: blur(4px);
   }
@@ -569,8 +596,8 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    border: 3px solid rgba(255, 255, 255, 0.25);
-    border-top-color: white;
+    border: 3px solid rgba(255, 255, 255, 0.18);
+    border-top-color: var(--brand-mint);
     animation: spin 0.9s linear infinite;
   }
 

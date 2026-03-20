@@ -22,39 +22,48 @@
 
   .time-slot {
     width: 100%;
-    padding: 0.85rem;
-    border-radius: 16px;
-    border: 1px solid var(--aico-color-border-light);
-    background: color-mix(in srgb, var(--aico-color-bg-primary) 96%, transparent);
+    padding: 0.95rem 1rem;
+    min-height: 84px;
+    border-radius: var(--widget-radius-sm);
+    border: 1px solid var(--widget-border-subtle);
+    background: var(--widget-surface-panel);
     text-align: left;
     cursor: pointer;
     transition: var(--transition-all);
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    color: var(--aico-color-text-primary);
-    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+    gap: 0.28rem;
+    color: var(--widget-text-heading);
+    box-shadow: 0 10px 22px rgba(var(--brand-midnight-rgb), 0.14);
   }
 
   .time-slot:hover {
-    border-color: color-mix(in srgb, var(--accent-color-primary) 30%, var(--aico-color-border-light));
-    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+    border-color: var(--widget-border-strong);
+    box-shadow: var(--widget-shadow-float);
+    transform: translateY(-1px);
   }
 
   .time-slot.selected {
     background: var(--surface-gradient);
-    color: var(--aico-color-text-inverse);
-    border-color: transparent;
+    color: var(--widget-button-primary-text);
+    border-color: rgba(var(--brand-signal-rgb), 0.24);
     box-shadow: 0 18px 32px rgba(var(--brand-petrol-rgb), 0.35);
   }
 
   .time {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
   .user {
-    font-size: 0.85rem;
-    opacity: 0.8;
+    font-size: 0.82rem;
+    color: var(--widget-text-muted);
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .time-slot.selected .user {
+    color: rgba(248, 250, 252, 0.76);
   }
 </style>

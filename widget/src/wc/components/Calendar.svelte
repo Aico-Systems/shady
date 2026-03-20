@@ -106,12 +106,12 @@
 <style>
 
   .calendar {
-    border-radius: 24px;
-    padding: 1.5rem;
-    border: 1px solid var(--aico-color-border-light);
-    background: color-mix(in srgb, var(--aico-color-bg-primary) 96%, transparent);
-    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
-    color: var(--aico-color-text-primary);
+    border-radius: var(--widget-radius-md);
+    padding: 1.55rem;
+    border: 1px solid var(--widget-border-subtle);
+    background: var(--widget-surface-panel);
+    box-shadow: var(--widget-shadow-card);
+    color: var(--widget-text-heading);
   }
 
   .calendar-header {
@@ -123,24 +123,27 @@
 
   .month-year {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.22rem;
+    letter-spacing: -0.03em;
+    color: var(--widget-text-heading);
   }
 
   .nav-button {
     width: 40px;
     height: 40px;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--aico-color-border-light) 75%, transparent);
-    background: color-mix(in srgb, var(--aico-color-bg-secondary) 70%, transparent);
+    border: 1px solid var(--widget-border-subtle);
+    background: var(--widget-surface-ghost);
     cursor: pointer;
     font-size: 1.25rem;
-    color: var(--aico-color-text-primary);
+    color: var(--widget-text-heading);
     transition: var(--transition-button);
   }
 
   .nav-button:hover {
-    border-color: color-mix(in srgb, var(--accent-color-primary) 35%, var(--aico-color-border-light));
-    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
+    border-color: var(--widget-border-strong);
+    box-shadow: var(--widget-shadow-float);
+    transform: translateY(-1px);
   }
 
   .calendar-grid {
@@ -151,41 +154,48 @@
 
   .weekday {
     text-align: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: var(--aico-color-text-tertiary);
+    color: var(--widget-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
   }
 
   .day {
     aspect-ratio: 1;
-    border: 1px solid transparent;
-    border-radius: 14px;
-    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0);
+    border-radius: var(--widget-radius-sm);
+    background: color-mix(in srgb, var(--widget-surface-field) 75%, transparent);
     cursor: pointer;
     font-weight: 600;
     transition: var(--transition-all);
-    color: var(--aico-color-text-primary);
+    color: var(--widget-text-heading);
   }
 
   .day:hover:not(.disabled) {
-    background: color-mix(in srgb, var(--accent-color-primary) 10%, transparent);
+    background: color-mix(in srgb, var(--brand-petrol) 18%, var(--widget-surface-field));
+    border-color: var(--widget-border-subtle);
+    transform: translateY(-1px);
   }
 
   .day.today {
-    border-color: color-mix(in srgb, var(--accent-color-primary) 45%, transparent);
+    border-color: rgba(var(--brand-signal-rgb), 0.34);
+    box-shadow: inset 0 0 0 1px rgba(var(--brand-signal-rgb), 0.18);
   }
 
   .day.selected {
     background: var(--surface-gradient);
-    color: var(--aico-color-text-inverse);
+    color: var(--widget-button-primary-text);
+    border-color: rgba(var(--brand-signal-rgb), 0.2);
+    box-shadow: 0 14px 24px rgba(var(--brand-petrol-rgb), 0.24);
   }
 
   .day.disabled {
-    opacity: 0.35;
+    opacity: 0.32;
     cursor: not-allowed;
   }
 
   .day.other-month {
-    opacity: 0.35;
+    opacity: 0.3;
   }
 </style>
