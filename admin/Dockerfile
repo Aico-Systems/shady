@@ -1,9 +1,11 @@
 FROM oven/bun:latest AS builder
 WORKDIR /app
 
-# Copy blueprint sources staged into the build context.
+# Copy blueprint and its AICO backend dependencies
 COPY blueprint/package.json blueprint/bun.lock blueprint/tsconfig.json ./blueprint/
 COPY blueprint/src ./blueprint/src/
+COPY backend/entity-schema ./backend/entity-schema/
+COPY backend/model-catalog ./backend/model-catalog/
 
 # Copy admin manifests and install deps
 COPY admin/package.json admin/bun.lock* ./

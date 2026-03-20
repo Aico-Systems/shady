@@ -106,6 +106,18 @@ jobs:
           path: blueprint
           token: ${{ secrets.SUBMODULES_PAT }}
 
+      - name: Checkout AICO backend packages (blueprint dependencies)
+        if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://x-access-token:${{ secrets.SUBMODULES_PAT }}@github.com/Aico-Systems/Umbrella.git /tmp/aico
+          cd /tmp/aico
+          git sparse-checkout set backend/entity-schema backend/model-catalog
+          cp -r backend/entity-schema $GITHUB_WORKSPACE/backend/entity-schema
+          cp -r backend/model-catalog $GITHUB_WORKSPACE/backend/model-catalog
+          mkdir -p $GITHUB_WORKSPACE/backend/src
+          rm -rf /tmp/aico
+
       - name: Set up Docker Buildx
         if: steps.changed.outputs.changed == 'true'
         uses: docker/setup-buildx-action@v3
