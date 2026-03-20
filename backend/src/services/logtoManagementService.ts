@@ -260,6 +260,15 @@ class LogtoManagementService {
   async assignRolesToUser(orgId: string, userId: string, roleIds: string[]): Promise<void> {
     await this.request('POST', `/organizations/${orgId}/users/${userId}/roles`, { organizationRoleIds: roleIds });
   }
+
+  async listOrganizationUsers(orgId: string): Promise<Array<{ user: LogtoUser; organizationRoles: Array<{ id: string; name: string }> }>> {
+    const data = await this.request<unknown>('GET', `/organizations/${orgId}/users?page=1&page_size=200`);
+    const items = this.asList<any>(data);
+    return items.map((item: any) => ({
+      user: item.user ?? item,
+      organizationRoles: item.organizationRoles ?? item.roles ?? [],
+    }));
+  }
 }
 
 export const logtoManagementService = new LogtoManagementService();

@@ -42,13 +42,12 @@ export const bookingUsers = pgTable(
     organizationId: text('organization_id')
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
-    logtoUserId: text('logto_user_id').notNull(), // From Logto
     email: text('email').notNull(),
-    displayName: text('display_name').notNull(),
-    googleCalendarId: text('google_calendar_id'), // Google Calendar ID (usually email)
-    googleRefreshToken: text('google_refresh_token'), // Encrypted OAuth refresh token
-    googleAccessToken: text('google_access_token'), // Temporary access token
-    googleTokenExpiry: timestamp('google_token_expiry'), // When access token expires
+    displayName: text('display_name').notNull().default(''), // Cache from Logto, updated on admin access
+    googleCalendarId: text('google_calendar_id'),
+    googleRefreshToken: text('google_refresh_token'),
+    googleAccessToken: text('google_access_token'),
+    googleTokenExpiry: timestamp('google_token_expiry'),
     isActive: boolean('is_active').default(true),
     timezone: text('timezone').default('UTC'),
     createdAt: timestamp('created_at').defaultNow(),
@@ -56,8 +55,7 @@ export const bookingUsers = pgTable(
   },
   (table) => ({
     orgIdx: index('idx_booking_users_org').on(table.organizationId),
-    logtoUserIdx: uniqueIndex('ux_booking_users_org_logto_user').on(table.organizationId, table.logtoUserId),
-    emailIdx: index('idx_booking_users_email').on(table.email)
+    orgEmailIdx: uniqueIndex('ux_booking_users_org_email').on(table.organizationId, table.email)
   })
 );
 

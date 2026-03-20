@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { usersApi, availabilityApi, type BookingUser, type AvailabilityRule } from '../api';
+  import { usersApi, availabilityApi, type OrgMember, type AvailabilityRule } from '../api';
   import { canManageUsers, canConnectCalendar } from '../permissions';
   import { t } from '../../i18n';
   import {
@@ -20,9 +20,9 @@
     AvatarDisplay,
   } from '@aico/blueprint';
 
-  let users = $state<BookingUser[]>([]);
+  let users = $state<OrgMember[]>([]);
   let loading = $state(true);
-  let selectedUser = $state<BookingUser | null>(null);
+  let selectedUser = $state<OrgMember | null>(null);
   let showAvailabilityModal = $state(false);
   let showCreateUserModal = $state(false);
   let availabilityRules = $state<AvailabilityRule[]>([]);
@@ -59,7 +59,6 @@
   );
 
   onMount(async () => {
-    await syncCurrentUser();
     await loadUsers();
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -69,15 +68,6 @@
       await loadUsers();
     }
   });
-
-  async function syncCurrentUser() {
-    try {
-      await usersApi.syncCurrentUser();
-    } catch (error) {
-      console.error('Failed to sync current user:', error);
-      toastService.error(get(t)('pages.users.notifications.syncError'));
-    }
-  }
 
   async function loadUsers() {
     try {
@@ -90,28 +80,39 @@
     }
   }
 
-  async function toggleActive(target: BookingUser, nextActive: boolean) {
+  async function ensureLocalRecord(target: OrgMember): Promise<string> {
+    if (target.localId) return target.localId;
+    const created = await usersApi.create({ email: target.email, displayName: target.displayName || '' });
+    return created.id;
+  }
+
+  async function toggleActive(target: OrgMember, nextActive: boolean) {
     try {
-      await usersApi.update(target.id, { isActive: nextActive });
+      const localId = await ensureLocalRecord(target);
+      await usersApi.update(localId, { isActive: nextActive });
       await loadUsers();
     } catch (error) {
       toastService.error(get(t)('pages.users.notifications.updateError'));
     }
   }
 
-  async function connectGoogle(target: BookingUser) {
+  async function connectGoogle(target: OrgMember) {
     try {
-      const { authUrl } = await usersApi.connectGoogle(target.id);
+      const localId = await ensureLocalRecord(target);
+      const { authUrl } = await usersApi.connectGoogle(localId);
       window.open(authUrl, '_blank', 'width=600,height=700');
     } catch (error) {
       toastService.error(get(t)('pages.users.notifications.connectError'));
     }
   }
 
-  async function openAvailabilityEditor(target: BookingUser) {
+  async function openAvailabilityEditor(target: OrgMember) {
     selectedUser = target;
     try {
-      availabilityRules = await availabilityApi.get(target.id);
+      const localId = await ensureLocalRecord(target);
+      // Update the target's localId for saveAvailability
+      target.localId = localId;
+      availabilityRules = await availabilityApi.get(localId);
     } catch (error) {
       availabilityRules = [];
     }
@@ -136,7 +137,7 @@
   }
 
   async function saveAvailability() {
-    if (!selectedUser) return;
+    if (!selectedUser?.localId) return;
 
     savingAvailability = true;
     try {
@@ -147,7 +148,7 @@
         isActive: rule.isActive,
       }));
 
-      await availabilityApi.update(selectedUser.id, rules);
+      await availabilityApi.update(selectedUser.localId, rules);
       showAvailabilityModal = false;
       toastService.success(get(t)('pages.users.notifications.availabilitySaved'));
     } catch (error) {
@@ -163,7 +164,7 @@
   }
 
   async function createUser() {
-    if (!newUser.email || !newUser.displayName) {
+    if (!newUser.email) {
       toastService.error(get(t)('pages.users.notifications.userCreateError'));
       return;
     }

@@ -32,20 +32,7 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
   try {
     await organizationSyncService.ensureOrganization(userContext.organizationId);
 
-    // Sync current user - auto-create booking user from Logto user
-    if (path === '/api/admin/users/sync' && method === 'POST') {
-      const denied = requireScopes(userContext, [
-        BOOKING_SCOPES.READ,
-        BOOKING_SCOPES.MANAGE_USERS,
-        BOOKING_SCOPES.MANAGE_CONFIG,
-        BOOKING_SCOPES.CONNECT_CALENDAR,
-        BOOKING_SCOPES.WRITE,
-      ]);
-      if (denied) return denied;
-      return await handleSyncCurrentUser(userContext);
-    }
-
-    // Users management
+    // Users management — Logto is source of truth, local records are calendar connections
     if (path === '/api/admin/users' && method === 'GET') {
       const denied = requireScopes(userContext, [BOOKING_SCOPES.READ]);
       if (denied) return denied;
@@ -55,7 +42,7 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
     if (path === '/api/admin/users' && method === 'POST') {
       const denied = requireScopes(userContext, [BOOKING_SCOPES.MANAGE_USERS]);
       if (denied) return denied;
-      return await handleCreateUser(request, userContext.organizationId, userContext.id);
+      return await handleCreateUser(request, userContext.organizationId);
     }
 
     // User details
@@ -143,117 +130,79 @@ function requireScopes(userContext: any, scopes: readonly string[]): Response | 
   return errorResponse(`Missing required scope. Expected one of: ${scopes.join(', ')}`, 403);
 }
 
-// POST /api/admin/users/sync - Sync current Logto user to booking database
-async function handleSyncCurrentUser(userContext: any): Promise<Response> {
-  const logtoUserId = userContext.id;
-  const orgId = userContext.organizationId;
-
-  if (!logtoUserId || !orgId) {
-    return errorResponse('User ID and organization required', 400);
-  }
-
-  // Check if user already exists (by logtoUserId first, then email fallback)
-  let existing = await db.query.bookingUsers.findFirst({
-    where: and(
-      eq(bookingUsers.organizationId, orgId),
-      eq(bookingUsers.logtoUserId, logtoUserId)
-    )
-  });
-
-  if (existing) {
-    logger.info('User already synced', { logtoUserId, bookingUserId: existing.id });
-    return jsonResponse({
-      success: true,
-      data: {
-        ...existing,
-        alreadyExists: true
-      }
-    });
-  }
-
-  // Get user info from Logto Management API
-  try {
-    await organizationSyncService.ensureOrganization(orgId);
-
-    const userInfo = await logtoManagementService.getUser(logtoUserId);
-    if (!userInfo) {
-      throw new Error(`Logto user ${logtoUserId} not found`);
-    }
-
-    const email = userInfo.primaryEmail || userInfo.username || `user-${logtoUserId}@unknown.local`;
-
-    // Fallback: match by email within org (handles Logto reseed where user IDs change)
-    existing = await db.query.bookingUsers.findFirst({
-      where: and(
-        eq(bookingUsers.organizationId, orgId),
-        eq(bookingUsers.email, email)
-      )
-    });
-
-    if (existing) {
-      const [updated] = await db.update(bookingUsers)
-        .set({ logtoUserId, displayName: userInfo.name || existing.displayName })
-        .where(eq(bookingUsers.id, existing.id))
-        .returning();
-      logger.info('User re-linked after Logto ID change', { logtoUserId, oldLogtoUserId: existing.logtoUserId, bookingUserId: existing.id });
-      return jsonResponse({ success: true, data: { ...updated, alreadyExists: true } });
-    }
-
-    // Create new booking user
-    const [bookingUser] = await db.insert(bookingUsers).values({
-      organizationId: orgId,
-      logtoUserId,
-      email,
-      displayName: userInfo.name || userInfo.username || 'User',
-      timezone: 'UTC',
-      isActive: true
-    }).returning();
-
-    logger.info('User synced successfully', { 
-      logtoUserId, 
-      bookingUserId: bookingUser.id,
-      email: bookingUser.email 
-    });
-
-    return jsonResponse({ success: true, data: bookingUser }, 201);
-  } catch (error: any) {
-    logger.error('Failed to sync user', { error: error.message, logtoUserId });
-    return errorResponse(`Failed to sync user: ${error.message}`, 500);
-  }
-}
-
-// GET /api/admin/users
+// GET /api/admin/users — Logto org members merged with local calendar connections
 async function handleGetUsers(orgId: string): Promise<Response> {
-  const users = await db.query.bookingUsers.findMany({
+  // Source of truth: Logto org membership
+  const logtoMembers = await logtoManagementService.listOrganizationUsers(orgId);
+
+  // Local calendar connections for this org
+  const localUsers = await db.query.bookingUsers.findMany({
     where: eq(bookingUsers.organizationId, orgId)
   });
+  const localByEmail = new Map(localUsers.map(u => [u.email, u]));
 
-  return jsonResponse({
-    success: true,
-    data: users.map(u => ({
-      id: u.id,
-      logtoUserId: u.logtoUserId,
-      email: u.email,
-      displayName: u.displayName,
-      isActive: u.isActive,
-      hasGoogleCalendar: !!u.googleCalendarId,
-      timezone: u.timezone,
-      createdAt: u.createdAt
-    }))
+  // Update stale display name caches as a side effect
+  const displayNameUpdates: Array<{ id: string; displayName: string }> = [];
+
+  const users = logtoMembers.map(member => {
+    const email = member.user.primaryEmail || member.user.username || '';
+    const logtoName = member.user.name || member.user.username || '';
+    const local = localByEmail.get(email);
+
+    if (local && logtoName && local.displayName !== logtoName) {
+      displayNameUpdates.push({ id: local.id, displayName: logtoName });
+    }
+
+    return {
+      email,
+      displayName: logtoName,
+      avatar: member.user.avatar || null,
+      roles: member.organizationRoles?.map((r: any) => r.name) || [],
+      // Local state (null if no calendar connection yet)
+      localId: local?.id || null,
+      isActive: local?.isActive ?? false,
+      hasGoogleCalendar: !!local?.googleCalendarId,
+      timezone: local?.timezone || 'UTC',
+      createdAt: local?.createdAt || null,
+    };
   });
+
+  // Fire-and-forget cache updates
+  if (displayNameUpdates.length > 0) {
+    Promise.all(
+      displayNameUpdates.map(u =>
+        db.update(bookingUsers)
+          .set({ displayName: u.displayName, updatedAt: new Date() })
+          .where(eq(bookingUsers.id, u.id))
+      )
+    ).catch(err => logger.warn('Failed to update display name cache', { error: err }));
+  }
+
+  return jsonResponse({ success: true, data: users });
 }
 
-// POST /api/admin/users
-async function handleCreateUser(request: Request, orgId: string, logtoUserId: string): Promise<Response> {
+// POST /api/admin/users — create local calendar connection for an org member
+async function handleCreateUser(request: Request, orgId: string): Promise<Response> {
   const body = await request.json();
+
+  if (!body.email) {
+    return errorResponse('Email is required', 400);
+  }
 
   const [user] = await db.insert(bookingUsers).values({
     organizationId: orgId,
-    logtoUserId: body.logtoUserId || logtoUserId,
     email: body.email,
-    displayName: body.displayName,
+    displayName: body.displayName || '',
     timezone: body.timezone || 'UTC',
     isActive: body.isActive ?? true
+  }).onConflictDoUpdate({
+    target: [bookingUsers.organizationId, bookingUsers.email],
+    set: {
+      displayName: body.displayName || '',
+      timezone: body.timezone || 'UTC',
+      isActive: body.isActive ?? true,
+      updatedAt: new Date()
+    }
   }).returning();
 
   return jsonResponse({ success: true, data: user }, 201);
@@ -281,8 +230,6 @@ async function handleUpdateUser(request: Request, userId: string, orgId: string)
 
   const [updated] = await db.update(bookingUsers)
     .set({
-      displayName: body.displayName,
-      email: body.email,
       timezone: body.timezone,
       isActive: body.isActive,
       updatedAt: new Date()
@@ -321,7 +268,6 @@ async function handleGoogleCallback(url: URL): Promise<Response> {
 
   try {
     await googleCalendarService.handleOAuthCallback(code, state);
-    // Redirect to admin UI success page
     return new Response(null, {
       status: 302,
       headers: {
@@ -355,11 +301,9 @@ async function handleUpdateAvailability(request: Request, userId: string, orgId:
   }
   const body: UpdateAvailabilityRequest = await request.json();
 
-  // Delete existing rules
   await db.delete(availabilityRules)
     .where(eq(availabilityRules.bookingUserId, userId));
 
-  // Insert new rules
   if (body.rules && body.rules.length > 0) {
     await db.insert(availabilityRules).values(
       body.rules.map(rule => ({
@@ -431,15 +375,15 @@ async function handleGetBookingStats(orgId: string): Promise<Response> {
 async function handleGetConfig(orgId: string): Promise<Response> {
   await organizationSyncService.ensureOrganization(orgId);
 
-  let config = await db.query.bookingConfigs.findFirst({
+  let cfg = await db.query.bookingConfigs.findFirst({
     where: eq(bookingConfigs.organizationId, orgId)
   });
 
-  if (!config) {
+  if (!cfg) {
     throw new Error(`Booking config missing after organization sync: ${orgId}`);
   }
 
-  return jsonResponse({ success: true, data: config });
+  return jsonResponse({ success: true, data: cfg });
 }
 
 // PUT /api/admin/config

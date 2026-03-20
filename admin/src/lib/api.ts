@@ -43,16 +43,19 @@ async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
   return data.data as T;
 }
 
-// Types
-export interface BookingUser {
-  id: string;
-  logtoUserId: string;
+// Types — user list merges Logto identity + local calendar state
+export interface OrgMember {
+  // From Logto (source of truth)
   email: string;
   displayName: string;
+  avatar: string | null;
+  roles: string[];
+  // From local DB (null if no calendar connection yet)
+  localId: string | null;
   isActive: boolean;
   hasGoogleCalendar: boolean;
   timezone: string;
-  createdAt: string;
+  createdAt: string | null;
 }
 
 export interface AvailabilityRule {
@@ -108,28 +111,20 @@ export interface BookingStats {
 
 // Users API
 export const usersApi = {
-  syncCurrentUser: () =>
-    apiCall<BookingUser>('/api/admin/users/sync', {
-      method: 'POST'
-    }),
-
-  list: () => apiCall<BookingUser[]>('/api/admin/users'),
-
-  get: (id: string) => apiCall<BookingUser>(`/api/admin/users/${id}`),
+  list: () => apiCall<OrgMember[]>('/api/admin/users'),
 
   create: (data: {
-    logtoUserId?: string;
     email: string;
-    displayName: string;
+    displayName?: string;
     timezone?: string;
     isActive?: boolean;
-  }) => apiCall<BookingUser>('/api/admin/users', {
+  }) => apiCall<any>('/api/admin/users', {
     method: 'POST',
     body: JSON.stringify(data)
   }),
 
-  update: (id: string, data: Partial<BookingUser>) =>
-    apiCall<BookingUser>(`/api/admin/users/${id}`, {
+  update: (id: string, data: { timezone?: string; isActive?: boolean }) =>
+    apiCall<any>(`/api/admin/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
     }),
