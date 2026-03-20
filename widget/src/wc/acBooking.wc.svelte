@@ -389,10 +389,18 @@
   :host {
     display: block;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   :global(:root) {
     font-family: var(--aico-font-family-default);
+  }
+
+  :host *,
+  :host *::before,
+  :host *::after {
+    box-sizing: border-box;
   }
 
   .booking-widget {
@@ -400,7 +408,7 @@
     max-width: 520px;
     margin: 0 auto;
     border-radius: var(--widget-radius-lg);
-    padding: 2rem;
+    padding: 1.25rem;
     background: var(--widget-surface-base);
     border: 1px solid var(--widget-border-subtle);
     box-shadow: var(--widget-shadow-glow);
@@ -409,21 +417,11 @@
     color: var(--widget-text-body);
     display: flex;
     flex-direction: column;
-    gap: 1.35rem;
+    gap: 1rem;
     isolation: isolate;
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(8px);
     line-height: 1.5;
-  }
-
-  .booking-widget::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(circle at 12% 0%, rgba(var(--brand-signal-rgb), 0.18), transparent 42%),
-      radial-gradient(circle at 100% 0%, rgba(var(--brand-petrol-rgb), 0.2), transparent 46%);
-    opacity: 0.85;
-    pointer-events: none;
+    box-sizing: border-box;
   }
 
   .widget-header {
@@ -451,42 +449,36 @@
   .widget-header h2 {
     margin: 0.2rem 0 0;
     font-size: clamp(1.45rem, 3vw, 1.85rem);
-    line-height: 1.05;
+    line-height: 1.1;
     color: var(--widget-text-heading);
     letter-spacing: -0.03em;
   }
 
   .stepper {
     display: flex;
-    gap: 0.55rem;
-    margin-bottom: 0.9rem;
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
   }
 
   .step {
     flex: 1;
-    height: 5px;
+    height: 4px;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--widget-border-subtle) 88%, transparent);
+    background: color-mix(in srgb, var(--widget-border-subtle) 85%, transparent);
     position: relative;
     overflow: hidden;
   }
 
   .step.done,
   .step.active {
-    background:
-      linear-gradient(90deg, rgba(var(--brand-signal-rgb), 0.16), rgba(var(--brand-signal-rgb), 0)),
-      var(--surface-gradient);
+    background: color-mix(in srgb, var(--widget-button-primary-bg) 55%, transparent);
   }
 
   .error-banner {
-    border-radius: 18px;
+    border-radius: var(--widget-radius-md);
     padding: 0.9rem 1rem;
-    background: linear-gradient(
-      135deg,
-      rgba(var(--aico-danger-rgb), 0.18),
-      rgba(var(--brand-midnight-rgb), 0.32)
-    );
-    border: 1px solid rgba(var(--aico-danger-rgb), 0.34);
+    background: color-mix(in srgb, rgba(var(--aico-danger-rgb), 0.12) 80%, var(--widget-surface-panel));
+    border: 1px solid rgba(var(--aico-danger-rgb), 0.28);
     font-size: 0.9rem;
     display: flex;
     justify-content: space-between;
@@ -535,11 +527,11 @@
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 1rem;
     border-radius: var(--widget-radius-md);
-    border: 1px solid var(--widget-border-strong);
+    border: 1px solid var(--widget-border-subtle);
     padding: 1.15rem 1.2rem;
     margin-bottom: 1.35rem;
-    background: var(--widget-surface-panel);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    background: var(--widget-surface-panel-strong);
+    box-shadow: none;
   }
 
   .summary-card .label {
@@ -557,11 +549,11 @@
   }
 
   .ghost {
-    border: 1px solid var(--widget-border-subtle);
-    border-radius: 999px;
-    padding: 0.55rem 1rem;
+    border: 1px solid var(--widget-button-secondary-border);
+    border-radius: var(--widget-radius-sm);
+    padding: 0 1rem;
     min-height: var(--widget-control-height);
-    background: var(--widget-surface-ghost);
+    background: var(--widget-button-secondary-bg);
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition-button);
@@ -569,9 +561,8 @@
   }
 
   .ghost:hover {
-    border-color: var(--widget-border-strong);
-    box-shadow: var(--widget-shadow-float);
-    transform: translateY(-1px);
+    border-color: var(--widget-button-secondary-border-hover);
+    background: var(--widget-button-secondary-bg-hover);
   }
 
   .ghost:focus-visible {
@@ -582,14 +573,14 @@
   .loading-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(2, 6, 23, 0.48);
+    background: rgba(2, 6, 23, 0.32);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: var(--widget-overlay-text);
     gap: 0.5rem;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(3px);
   }
 
   .spinner {
@@ -609,8 +600,32 @@
 
   @media (max-width: 520px) {
     .booking-widget {
-      padding: 1.5rem;
-      border-radius: 24px;
+      padding: 1rem;
+      border-radius: 18px;
+      gap: 1rem;
+    }
+
+    .widget-header h2 {
+      font-size: 1.25rem;
+    }
+
+    .stepper {
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .widget-body {
+      min-height: 0;
+    }
+
+    .time-pane header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .selected-date {
+      text-align: left;
     }
   }
 

@@ -158,11 +158,11 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    padding: 1.15rem;
+    padding: 1rem;
     border-radius: var(--widget-radius-md);
     background: var(--widget-surface-panel-strong);
     border: 1px solid var(--widget-border-subtle);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    box-shadow: none;
   }
 
   .form-group {
@@ -189,12 +189,12 @@
     border-radius: var(--widget-radius-sm);
     border: 1px solid var(--widget-border-subtle);
     background: var(--widget-surface-field);
-    padding: 0.88rem 0.95rem;
+    padding: 0.8rem 0.9rem;
     min-height: var(--widget-control-height);
     font: inherit;
     transition: var(--transition-all);
     color: var(--widget-text-heading);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    box-shadow: none;
   }
 
   textarea {
@@ -206,9 +206,7 @@
   textarea:focus {
     outline: none;
     border-color: var(--widget-border-strong);
-    box-shadow:
-      0 0 0 3px var(--widget-focus-ring),
-      0 10px 22px rgba(var(--brand-midnight-rgb), 0.14);
+    box-shadow: 0 0 0 3px var(--widget-focus-ring);
   }
 
   input::placeholder,
@@ -230,11 +228,11 @@
   }
 
   .ghost {
-    border: 1px solid var(--widget-border-subtle);
-    padding: 0.72rem 1.2rem;
+    border: 1px solid var(--widget-button-secondary-border);
+    padding: 0 1.1rem;
     min-height: var(--widget-control-height);
-    border-radius: 999px;
-    background: var(--widget-surface-ghost);
+    border-radius: var(--widget-radius-sm);
+    background: var(--widget-button-secondary-bg);
     cursor: pointer;
     transition: var(--transition-button);
     color: var(--widget-button-secondary-text);
@@ -242,9 +240,8 @@
   }
 
   .ghost:hover:not(:disabled) {
-    border-color: var(--widget-border-strong);
-    transform: translateY(-1px);
-    box-shadow: var(--widget-shadow-float);
+    border-color: var(--widget-button-secondary-border-hover);
+    background: var(--widget-button-secondary-bg-hover);
   }
 
   .ghost:focus-visible {
@@ -253,21 +250,21 @@
   }
 
   .btn-primary {
-    border: none;
-    border-radius: 999px;
-    padding: 0.78rem 1.5rem;
+    border: 1px solid var(--widget-button-primary-bg);
+    border-radius: var(--widget-radius-sm);
+    padding: 0 1.35rem;
     min-height: var(--widget-control-height);
-    background: var(--surface-gradient);
+    background: var(--widget-button-primary-bg);
     color: var(--widget-button-primary-text);
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 16px 30px rgba(var(--brand-petrol-rgb), 0.28);
+    box-shadow: none;
     transition: var(--transition-button);
   }
 
   .btn-primary:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 20px 34px rgba(var(--brand-petrol-rgb), 0.34);
+    background: var(--widget-button-primary-bg-hover);
+    border-color: var(--widget-button-primary-bg-hover);
   }
 
   .btn-primary:disabled {

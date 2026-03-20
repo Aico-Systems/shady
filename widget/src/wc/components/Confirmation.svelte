@@ -109,15 +109,15 @@
   .icon {
     width: 72px;
     height: 72px;
-    border-radius: 24px;
+    border-radius: var(--widget-radius-md);
     margin: 0 auto;
-    background: var(--surface-gradient);
+    background: var(--widget-button-primary-bg);
     color: var(--widget-button-primary-text);
     font-size: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 20px 36px rgba(var(--brand-petrol-rgb), 0.28);
+    box-shadow: none;
   }
 
   h3 {
@@ -134,12 +134,12 @@
   .details {
     border-radius: var(--widget-radius-md);
     border: 1px solid var(--widget-border-subtle);
-    padding: 1.5rem;
+    padding: 1.2rem;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 1rem;
     background: var(--widget-surface-panel);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    box-shadow: none;
   }
 
   .label {
@@ -169,11 +169,11 @@
   }
 
   .actions button {
-    border-radius: 999px;
-    border: 1px solid var(--widget-border-subtle);
-    padding: 0.75rem;
+    border-radius: var(--widget-radius-sm);
+    border: 1px solid var(--widget-button-secondary-border);
+    padding: 0 1rem;
     min-height: var(--widget-control-height);
-    background: var(--widget-surface-ghost);
+    background: var(--widget-button-secondary-bg);
     color: var(--widget-button-secondary-text);
     font-weight: 600;
     cursor: pointer;
@@ -181,17 +181,16 @@
   }
 
   .actions button:hover {
-    border-color: var(--widget-border-strong);
-    box-shadow: var(--widget-shadow-float);
-    transform: translateY(-1px);
+    border-color: var(--widget-button-secondary-border-hover);
+    background: var(--widget-button-secondary-bg-hover);
   }
 
   .primary {
-    border: none;
-    border-radius: 999px;
-    padding: 0.75rem;
+    border: 1px solid var(--widget-button-primary-bg);
+    border-radius: var(--widget-radius-sm);
+    padding: 0 1rem;
     min-height: var(--widget-control-height);
-    background: var(--surface-gradient);
+    background: var(--widget-button-primary-bg);
     color: var(--widget-button-primary-text);
     font-weight: 600;
     cursor: pointer;
@@ -199,6 +198,7 @@
   }
 
   .primary:hover {
-    box-shadow: 0 15px 30px rgba(var(--brand-petrol-rgb), 0.3);
+    background: var(--widget-button-primary-bg-hover);
+    border-color: var(--widget-button-primary-bg-hover);
   }
 </style>

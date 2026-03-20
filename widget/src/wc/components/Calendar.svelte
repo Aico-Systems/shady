@@ -107,7 +107,7 @@
 
   .calendar {
     border-radius: var(--widget-radius-md);
-    padding: 1.55rem;
+    padding: 1.2rem;
     border: 1px solid var(--widget-border-subtle);
     background: var(--widget-surface-panel);
     box-shadow: var(--widget-shadow-card);
@@ -131,9 +131,9 @@
   .nav-button {
     width: 40px;
     height: 40px;
-    border-radius: 999px;
-    border: 1px solid var(--widget-border-subtle);
-    background: var(--widget-surface-ghost);
+    border-radius: var(--widget-radius-sm);
+    border: 1px solid var(--widget-button-secondary-border);
+    background: var(--widget-button-secondary-bg);
     cursor: pointer;
     font-size: 1.25rem;
     color: var(--widget-text-heading);
@@ -141,15 +141,14 @@
   }
 
   .nav-button:hover {
-    border-color: var(--widget-border-strong);
-    box-shadow: var(--widget-shadow-float);
-    transform: translateY(-1px);
+    border-color: var(--widget-button-secondary-border-hover);
+    background: var(--widget-button-secondary-bg-hover);
   }
 
   .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
+    gap: 8px;
   }
 
   .weekday {
@@ -163,9 +162,10 @@
 
   .day {
     aspect-ratio: 1;
-    border: 1px solid rgba(0, 0, 0, 0);
+    min-width: 0;
+    border: 1px solid transparent;
     border-radius: var(--widget-radius-sm);
-    background: color-mix(in srgb, var(--widget-surface-field) 75%, transparent);
+    background: var(--widget-surface-field);
     cursor: pointer;
     font-weight: 600;
     transition: var(--transition-all);
@@ -173,9 +173,8 @@
   }
 
   .day:hover:not(.disabled) {
-    background: color-mix(in srgb, var(--brand-petrol) 18%, var(--widget-surface-field));
+    background: color-mix(in srgb, var(--widget-button-primary-bg) 10%, var(--widget-surface-field));
     border-color: var(--widget-border-subtle);
-    transform: translateY(-1px);
   }
 
   .day.today {
@@ -184,10 +183,10 @@
   }
 
   .day.selected {
-    background: var(--surface-gradient);
+    background: var(--widget-button-primary-bg);
     color: var(--widget-button-primary-text);
-    border-color: rgba(var(--brand-signal-rgb), 0.2);
-    box-shadow: 0 14px 24px rgba(var(--brand-petrol-rgb), 0.24);
+    border-color: color-mix(in srgb, var(--widget-button-primary-bg) 80%, transparent);
+    box-shadow: none;
   }
 
   .day.disabled {
@@ -197,5 +196,39 @@
 
   .day.other-month {
     opacity: 0.3;
+  }
+
+  @media (max-width: 520px) {
+    .calendar {
+      padding: 1rem;
+    }
+
+    .calendar-header {
+      margin-bottom: 1rem;
+    }
+
+    .month-year {
+      font-size: 1rem;
+    }
+
+    .nav-button {
+      width: 36px;
+      height: 36px;
+      font-size: 1.1rem;
+    }
+
+    .calendar-grid {
+      gap: 6px;
+    }
+
+    .weekday {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+    }
+
+    .day {
+      min-width: 0;
+      font-size: 0.95rem;
+    }
   }
 </style>

@@ -22,11 +22,11 @@
 
   .time-slot {
     width: 100%;
-    padding: 0.95rem 1rem;
-    min-height: 84px;
+    padding: 0.9rem 1rem;
+    min-height: 76px;
     border-radius: var(--widget-radius-sm);
-    border: 1px solid var(--widget-border-subtle);
-    background: var(--widget-surface-panel);
+    border: 1px solid var(--widget-button-secondary-border);
+    background: var(--widget-button-secondary-bg);
     text-align: left;
     cursor: pointer;
     transition: var(--transition-all);
@@ -34,20 +34,18 @@
     flex-direction: column;
     gap: 0.28rem;
     color: var(--widget-text-heading);
-    box-shadow: 0 10px 22px rgba(var(--brand-midnight-rgb), 0.14);
+    box-shadow: none;
   }
 
   .time-slot:hover {
-    border-color: var(--widget-border-strong);
-    box-shadow: var(--widget-shadow-float);
-    transform: translateY(-1px);
+    border-color: var(--widget-button-secondary-border-hover);
+    background: var(--widget-button-secondary-bg-hover);
   }
 
   .time-slot.selected {
-    background: var(--surface-gradient);
+    background: var(--widget-button-primary-bg);
     color: var(--widget-button-primary-text);
-    border-color: rgba(var(--brand-signal-rgb), 0.24);
-    box-shadow: 0 18px 32px rgba(var(--brand-petrol-rgb), 0.35);
+    border-color: color-mix(in srgb, var(--widget-button-primary-bg) 80%, transparent);
   }
 
   .time {
@@ -64,6 +62,6 @@
   }
 
   .time-slot.selected .user {
-    color: rgba(248, 250, 252, 0.76);
+    color: color-mix(in srgb, var(--widget-button-primary-text) 76%, transparent);
   }
 </style>
