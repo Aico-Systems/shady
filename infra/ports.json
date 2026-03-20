@@ -60,6 +60,7 @@
       "VITE_LOGTO_ENDPOINT": "http://localhost:3001",
       "VITE_LOGTO_API_RESOURCE": "https://api.booking-service.local",
       "VITE_WIDGET_URL": "http://localhost:5174",
+      "VITE_WIDGET_DEFAULT_ORG": "aico-global",
 
       "BACKEND_URL": "http://localhost:5006",
       "ADMIN_URL": "http://localhost:5175",
@@ -80,14 +81,15 @@
       "POSTGRES_USER": "booking_user",
       "POSTGRES_DB": "booking_service",
 
-      "LOGTO_ENDPOINT": "https://auth.aicoflow.com",
-      "LOGTO_ISSUER": "https://auth.aicoflow.com/oidc",
+      "LOGTO_ENDPOINT": "https://auth.aicoflow.xyz",
+      "LOGTO_ISSUER": "https://auth.aicoflow.xyz/oidc",
       "LOGTO_API_RESOURCE": "https://api.booking-service.local",
 
       "VITE_BACKEND_URL": "https://api.shady.aicoflow.com",
-      "VITE_LOGTO_ENDPOINT": "https://auth.aicoflow.com",
+      "VITE_LOGTO_ENDPOINT": "https://auth.aicoflow.xyz",
       "VITE_LOGTO_API_RESOURCE": "https://api.booking-service.local",
       "VITE_WIDGET_URL": "https://widget.shady.aicoflow.com",
+      "VITE_WIDGET_DEFAULT_ORG": "aico-global",
 
       "BACKEND_URL": "https://api.shady.aicoflow.com",
       "ADMIN_URL": "https://shady.aicoflow.com",
