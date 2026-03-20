@@ -8,7 +8,7 @@
     "start": "bun src/main.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

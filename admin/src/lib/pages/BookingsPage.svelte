@@ -4,8 +4,15 @@
   import { bookingsApi, type BookingWithUser } from '../api';
   import { canManageBookings } from '../permissions';
   import { t, locale } from '../../i18n';
-  import { CalendarDays, Video, X } from '@lucide/svelte';
-  import { toastService } from '@aico/blueprint';
+  import {
+    toastService,
+    PageLayout,
+    SectionPanel,
+    StatsGrid,
+    Badge,
+    Button,
+    StateBlock,
+  } from '@aico/blueprint';
 
   let bookings = $state<BookingWithUser[]>([]);
   let loading = $state(true);
@@ -47,6 +54,7 @@
     const confirmMessage = translator('actions.confirmCancel', {
       values: { name: booking.visitorData.name || 'visitor' },
     });
+
     if (!confirm(confirmMessage)) return;
 
     const reason = prompt(translator('actions.cancellationReason'));
@@ -72,134 +80,169 @@
     }).format(date);
   }
 
-  function getStatusBadgeClass(status: string): string {
-    if (status === 'confirmed') return 'badge-success';
-    if (status === 'cancelled') return 'badge-danger';
-    return 'badge-default';
+  function getStatusTone(status: string): 'positive' | 'danger' | 'muted' {
+    if (status === 'confirmed') return 'positive';
+    if (status === 'cancelled') return 'danger';
+    return 'muted';
   }
 </script>
 
-<div class="page bookings-page">
-  <div class="page-content">
-    <section class="page-surface">
-      <header class="page-header surface-toolbar">
-        <div class="surface-header">
-          <p class="eyebrow">{$t('navigation.bookings')}</p>
-          <h1>{$t('pages.bookings.title')}</h1>
-          <p>{$t('pages.bookings.subtitle')}</p>
-        </div>
-      </header>
+<PageLayout
+  title={$t('pages.bookings.title')}
+  description={$t('pages.bookings.subtitle')}
+  maxWidth="full"
+  spacing="md"
+>
+  <StatsGrid
+    columns="auto"
+    minColumnWidth={180}
+    items={[
+      {
+        title: $t('pages.bookings.stats.total'),
+        value: stats.total,
+        tone: 'neutral',
+      },
+      {
+        title: $t('pages.bookings.stats.confirmed'),
+        value: stats.confirmed,
+        tone: 'positive',
+      },
+      {
+        title: $t('pages.bookings.stats.upcoming'),
+        value: stats.upcomingCount,
+        tone: 'info',
+      },
+      {
+        title: $t('pages.bookings.stats.cancelled'),
+        value: stats.cancelled,
+        tone: 'critical',
+      },
+    ]}
+  />
 
-      <div class="stats-grid">
-        <div class="stat-card">
-          <p class="stat-label">{$t('pages.bookings.stats.total')}</p>
-          <div class="stat-value">{stats.total}</div>
-        </div>
-        <div class="stat-card">
-          <p class="stat-label">{$t('pages.bookings.stats.confirmed')}</p>
-          <div class="stat-value">{stats.confirmed}</div>
-        </div>
-        <div class="stat-card">
-          <p class="stat-label">{$t('pages.bookings.stats.upcoming')}</p>
-          <div class="stat-value">{stats.upcomingCount}</div>
-        </div>
-        <div class="stat-card">
-          <p class="stat-label">{$t('pages.bookings.stats.cancelled')}</p>
-          <div class="stat-value">{stats.cancelled}</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="page-surface">
-      {#if loading}
-        <div class="loading">{$t('pages.bookings.loading')}</div>
-      {:else if bookings.length === 0}
-        <div class="empty-state">
-          <CalendarDays size={32} />
-          <h3>{$t('pages.bookings.emptyTitle')}</h3>
-          <p>{$t('pages.bookings.emptyHelp')}</p>
-        </div>
-      {:else}
-        <div class="bookings-table">
-          <table>
-            <thead>
+  <SectionPanel>
+    {#if loading}
+      <StateBlock variant="loading" message={$t('pages.bookings.loading')} />
+    {:else if bookings.length === 0}
+      <StateBlock
+        variant="empty"
+        title={$t('pages.bookings.emptyTitle')}
+        message={$t('pages.bookings.emptyHelp')}
+      />
+    {:else}
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{$t('pages.bookings.table.datetime')}</th>
+              <th>{$t('pages.bookings.table.with')}</th>
+              <th>{$t('pages.bookings.table.visitor')}</th>
+              <th>{$t('pages.bookings.table.contact')}</th>
+              <th>{$t('pages.bookings.table.status')}</th>
+              <th>{$t('pages.bookings.table.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each bookings as booking}
               <tr>
-                <th>{$t('pages.bookings.table.datetime')}</th>
-                <th>{$t('pages.bookings.table.with')}</th>
-                <th>{$t('pages.bookings.table.visitor')}</th>
-                <th>{$t('pages.bookings.table.contact')}</th>
-                <th>{$t('pages.bookings.table.status')}</th>
-                <th>{$t('pages.bookings.table.actions')}</th>
+                <td><strong>{formatDate(booking.startTime)}</strong></td>
+                <td>{booking.user.displayName}</td>
+                <td>{booking.visitorData.name || '—'}</td>
+                <td>
+                  <div class="contact-info">
+                    {#if booking.visitorData.email}
+                      <div>{booking.visitorData.email}</div>
+                    {/if}
+                    {#if booking.visitorData.phone}
+                      <div class="phone">{booking.visitorData.phone}</div>
+                    {/if}
+                  </div>
+                </td>
+                <td>
+                  <Badge tone={getStatusTone(booking.status)} size="sm" label={$t(`statuses.${booking.status}`) || booking.status} />
+                </td>
+                <td>
+                  <div class="row-actions">
+                    {#if booking.status === 'confirmed'}
+                      {#if booking.googleMeetLink}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon="video"
+                          onclick={() => window.open(booking.googleMeetLink, '_blank', 'noopener,noreferrer')}
+                        >
+                          {$t('actions.joinMeeting')}
+                        </Button>
+                      {/if}
+
+                      {#if $canManageBookings}
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          icon="x"
+                          onclick={() => cancelBooking(booking)}
+                        >
+                          {$t('actions.cancel')}
+                        </Button>
+                      {/if}
+                    {/if}
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {#each bookings as booking}
-                <tr>
-                  <td>
-                    <div class="datetime">{formatDate(booking.startTime)}</div>
-                  </td>
-                  <td>{booking.user.displayName}</td>
-                  <td>{booking.visitorData.name || '—'}</td>
-                  <td>
-                    <div class="contact-info">
-                      {#if booking.visitorData.email}
-                        <div>{booking.visitorData.email}</div>
-                      {/if}
-                      {#if booking.visitorData.phone}
-                        <div class="phone">{booking.visitorData.phone}</div>
-                      {/if}
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge {getStatusBadgeClass(booking.status)}">
-                      {$t(`statuses.${booking.status}`) || booking.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="surface-actions">
-                      {#if booking.status === 'confirmed'}
-                        {#if booking.googleMeetLink}
-                          <a
-                            class="ghost"
-                            href={booking.googleMeetLink}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <Video size={16} />
-                            <span>{$t('actions.joinMeeting')}</span>
-                          </a>
-                        {/if}
-                        {#if $canManageBookings}
-                          <button class="ghost danger" type="button" onclick={() => cancelBooking(booking)}>
-                            <X size={16} />
-                            <span>{$t('actions.cancel')}</span>
-                          </button>
-                        {/if}
-                      {/if}
-                    </div>
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
-    </section>
-  </div>
-</div>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
+  </SectionPanel>
+</PageLayout>
 
 <style>
-  .datetime {
-    font-weight: 600;
+  .table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--aico-color-border-light);
+    border-radius: var(--blueprint-radius-lg);
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+    font-size: 0.9rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: var(--blueprint-spacing-sm) var(--blueprint-spacing-md);
+    border-bottom: 1px solid var(--aico-color-border-light);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .data-table th {
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--aico-color-text-tertiary);
+  }
+
+  .data-table tr:last-child td {
+    border-bottom: none;
   }
 
   .contact-info {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 2px;
   }
 
-  .contact-info .phone {
+  .phone {
     color: var(--aico-color-text-secondary);
+  }
+
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--blueprint-spacing-xs);
   }
 </style>

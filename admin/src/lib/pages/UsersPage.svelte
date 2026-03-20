@@ -4,8 +4,21 @@
   import { usersApi, availabilityApi, type BookingUser, type AvailabilityRule } from '../api';
   import { canManageUsers, canConnectCalendar } from '../permissions';
   import { t } from '../../i18n';
-  import { Plus, CalendarRange, Link2 } from '@lucide/svelte';
-  import { toastService } from '@aico/blueprint';
+  import {
+    toastService,
+    PageLayout,
+    SectionPanel,
+    Button,
+    Badge,
+    Modal,
+    ModalContent,
+    ModalFooter,
+    Toggle,
+    FormField,
+    IconButton,
+    StateBlock,
+    AvatarDisplay,
+  } from '@aico/blueprint';
 
   let users = $state<BookingUser[]>([]);
   let loading = $state(true);
@@ -31,6 +44,19 @@
     { value: 5, labelKey: 'friday' },
     { value: 6, labelKey: 'saturday' },
   ] as const;
+
+  let pageActions = $derived(
+    $canManageUsers
+      ? [
+          {
+            label: get(t)('pages.users.buttons.create'),
+            onClick: openCreateUserModal,
+            variant: 'primary' as const,
+            icon: 'plus',
+          },
+        ]
+      : [],
+  );
 
   onMount(async () => {
     await syncCurrentUser();
@@ -64,9 +90,9 @@
     }
   }
 
-  async function toggleActive(target: BookingUser) {
+  async function toggleActive(target: BookingUser, nextActive: boolean) {
     try {
-      await usersApi.update(target.id, { isActive: !target.isActive });
+      await usersApi.update(target.id, { isActive: nextActive });
       await loadUsers();
     } catch (error) {
       toastService.error(get(t)('pages.users.notifications.updateError'));
@@ -156,252 +182,326 @@
   }
 </script>
 
-<div class="page users-page">
-  <div class="page-content">
-    <section class="page-surface">
-      <header class="page-header surface-toolbar">
-        <div class="surface-header">
-          <p class="eyebrow">{$t('navigation.users')}</p>
-          <h1>{$t('pages.users.title')}</h1>
-          <p>{$t('pages.users.subtitle')}</p>
-        </div>
-        {#if $canManageUsers}
-          <button class="btn-primary" type="button" onclick={openCreateUserModal}>
-            <Plus size={16} />
-            <span>{$t('pages.users.buttons.create')}</span>
-          </button>
-        {/if}
-      </header>
-    </section>
-
-    <section class="page-surface">
-      {#if loading}
-        <div class="loading">{$t('pages.users.loading')}</div>
-      {:else if users.length === 0}
-        <div class="empty-state">
-          <h3>{$t('pages.users.emptyTitle')}</h3>
-          <p>{$t('pages.users.emptyHelp')}</p>
-        </div>
-      {:else}
-        <div class="users-table">
-          <table>
-            <thead>
+<PageLayout
+  title={$t('pages.users.title')}
+  description={$t('pages.users.subtitle')}
+  maxWidth="full"
+  spacing="md"
+  actions={pageActions}
+>
+  <SectionPanel>
+    {#if loading}
+      <StateBlock variant="loading" message={$t('pages.users.loading')} />
+    {:else if users.length === 0}
+      <StateBlock
+        variant="empty"
+        title={$t('pages.users.emptyTitle')}
+        message={$t('pages.users.emptyHelp')}
+      />
+    {:else}
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{$t('pages.users.table.name')}</th>
+              <th>{$t('pages.users.table.email')}</th>
+              <th>{$t('pages.users.table.calendar')}</th>
+              <th>{$t('pages.users.table.active')}</th>
+              <th>{$t('pages.users.table.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each users as bookingUser}
               <tr>
-                <th>{$t('pages.users.table.name')}</th>
-                <th>{$t('pages.users.table.email')}</th>
-                <th>{$t('pages.users.table.calendar')}</th>
-                <th>{$t('pages.users.table.active')}</th>
-                <th>{$t('pages.users.table.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each users as user}
-                <tr>
-                  <td>
-                    <div class="identity">
-                      <div class="avatar-sm">
-                        {user.displayName?.[0]?.toUpperCase() ?? 'U'}
-                      </div>
-                      <div>
-                        <strong>{user.displayName}</strong>
-                        <small>{user.timezone}</small>
-                      </div>
+                <td>
+                  <div class="identity-cell">
+                    <AvatarDisplay name={bookingUser.displayName} size="sm" />
+                    <div class="identity-text">
+                      <strong>{bookingUser.displayName}</strong>
+                      <small>{bookingUser.timezone}</small>
                     </div>
-                  </td>
-                  <td>{user.email}</td>
-                  <td>
-                    {#if user.hasGoogleCalendar}
-                      <span class="badge badge-success">{$t('pages.users.google.connected')}</span>
-                    {:else}
-                      <span class="badge badge-default">{$t('pages.users.google.disconnected')}</span>
+                  </div>
+                </td>
+                <td>{bookingUser.email}</td>
+                <td>
+                  {#if bookingUser.hasGoogleCalendar}
+                    <Badge tone="positive" size="sm" label={$t('pages.users.google.connected')} />
+                  {:else}
+                    <Badge tone="muted" size="sm" label={$t('pages.users.google.disconnected')} />
+                  {/if}
+                </td>
+                <td>
+                  <Toggle
+                    checked={bookingUser.isActive}
+                    onChange={(nextActive) => toggleActive(bookingUser, nextActive)}
+                    disabled={!$canManageUsers}
+                    variant="plain"
+                    size="sm"
+                  />
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      icon="calendar-range"
+                      onclick={() => openAvailabilityEditor(bookingUser)}
+                    >
+                      {$t('pages.users.buttons.availability')}
+                    </Button>
+
+                    {#if !bookingUser.hasGoogleCalendar && $canConnectCalendar}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        icon="link-2"
+                        onclick={() => connectGoogle(bookingUser)}
+                      >
+                        {$t('pages.users.google.connect')}
+                      </Button>
                     {/if}
-                  </td>
-                  <td>
-                    <label class="toggle">
-                      <input
-                        type="checkbox"
-                        checked={user.isActive}
-                        onchange={() => toggleActive(user)}
-                        disabled={!$canManageUsers}
-                      />
-                      <span></span>
-                    </label>
-                  </td>
-                  <td>
-                    <div class="surface-actions">
-                      <button type="button" class="ghost" onclick={() => openAvailabilityEditor(user)}>
-                        <CalendarRange size={16} />
-                        <span>{$t('pages.users.buttons.availability')}</span>
-                      </button>
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
+  </SectionPanel>
+</PageLayout>
 
-                      {#if !user.hasGoogleCalendar && $canConnectCalendar}
-                        <button type="button" class="ghost" onclick={() => connectGoogle(user)}>
-                          <Link2 size={16} />
-                          <span>{$t('pages.users.google.connect')}</span>
-                        </button>
-                      {/if}
-                    </div>
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
+<Modal
+  open={showAvailabilityModal && !!selectedUser}
+  onClose={() => (showAvailabilityModal = false)}
+  size="lg"
+>
+  <ModalContent>
+    <div class="modal-heading">
+      <Badge eyebrow tone="muted" label={$t('pages.users.buttons.availability')} />
+      {#if selectedUser}
+        <h3>{$t('pages.users.modals.availability.title', { values: { name: selectedUser.displayName } })}</h3>
       {/if}
-    </section>
-  </div>
-</div>
+    </div>
 
-{#if showAvailabilityModal && selectedUser}
-  <div
-    class="modal-overlay"
-    role="presentation"
-    onclick={(event) => {
-      if (event.target === event.currentTarget) {
-        showAvailabilityModal = false;
-      }
-    }}
-  >
-    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
-      <header class="modal-header">
-        <div>
-          <p class="eyebrow">{$t('pages.users.buttons.availability')}</p>
-          <h3>{$t('pages.users.modals.availability.title', { values: { name: selectedUser.displayName } })}</h3>
-        </div>
-        <button class="ghost" onclick={() => (showAvailabilityModal = false)}>
-          {$t('actions.close')}
-        </button>
-      </header>
-
-      <div class="modal-body availability-editor">
-        {#each availabilityRules as rule, index}
-          <div class="availability-row">
+    <div class="availability-editor">
+      {#each availabilityRules as rule, index}
+        <div class="availability-row">
+          <FormField>
             <select bind:value={rule.dayOfWeek}>
               {#each daysOfWeek as day}
                 <option value={day.value}>{$t(`pages.users.days.${day.labelKey}`)}</option>
               {/each}
             </select>
+          </FormField>
+
+          <FormField>
             <input type="time" bind:value={rule.startTime} />
-            <span>{$t('pages.users.modals.availability.rangeSeparator')}</span>
+          </FormField>
+          <span class="range-separator">{$t('pages.users.modals.availability.rangeSeparator')}</span>
+          <FormField>
             <input type="time" bind:value={rule.endTime} />
-            <button class="icon-only" type="button" onclick={() => removeAvailabilityRule(index)}>
-              ✕
-            </button>
-          </div>
-        {/each}
+          </FormField>
 
-        <button class="btn-secondary" type="button" onclick={addAvailabilityRule}>
-          {$t('pages.users.modals.availability.addSlot')}
-        </button>
-      </div>
-
-      <footer class="modal-footer">
-        <button class="ghost" type="button" onclick={() => (showAvailabilityModal = false)}>
-          {$t('pages.users.modals.availability.cancel')}
-        </button>
-        <button class="btn-primary" type="button" onclick={saveAvailability} disabled={savingAvailability}>
-          {savingAvailability
-            ? $t('pages.users.modals.availability.saving')
-            : $t('pages.users.modals.availability.save')}
-        </button>
-      </footer>
-    </div>
-  </div>
-{/if}
-
-{#if showCreateUserModal}
-  <div
-    class="modal-overlay"
-    role="presentation"
-    onclick={(event) => {
-      if (event.target === event.currentTarget) {
-        showCreateUserModal = false;
-      }
-    }}
-  >
-    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
-      <header class="modal-header">
-        <div>
-          <p class="eyebrow">{$t('navigation.users')}</p>
-          <h3>{$t('pages.users.modals.create.title')}</h3>
+          <IconButton
+            icon="x"
+            label={$t('actions.close')}
+            tone="danger"
+            variant="soft"
+            size="sm"
+            onClick={() => removeAvailabilityRule(index)}
+          />
         </div>
-        <button class="ghost" onclick={() => (showCreateUserModal = false)}>
-          {$t('actions.close')}
-        </button>
-      </header>
+      {/each}
 
-      <div class="modal-body">
-        <form class="form-stack" onsubmit={(event) => {
-          event.preventDefault();
-          createUser();
-        }}>
-          <div class="form-group">
-            <label for="email">{$t('pages.users.modals.create.emailLabel')}</label>
-            <input
-              id="email"
-              type="email"
-              bind:value={newUser.email}
-              placeholder="user@example.com"
-              required
-            />
-            <small class="help-text">{$t('pages.users.modals.create.emailHelp')}</small>
-          </div>
-
-          <div class="form-group">
-            <label for="displayName">{$t('pages.users.modals.create.nameLabel')}</label>
-            <input
-              id="displayName"
-              type="text"
-              bind:value={newUser.displayName}
-              placeholder="Alex Example"
-              required
-            />
-            <small class="help-text">{$t('pages.users.modals.create.nameHelp')}</small>
-          </div>
-
-          <div class="form-group">
-            <label for="timezone">{$t('pages.users.modals.create.timezoneLabel')}</label>
-            <select id="timezone" bind:value={newUser.timezone}>
-              <option value="UTC">UTC</option>
-              <option value="Europe/Berlin">Europe/Berlin</option>
-              <option value="Europe/London">Europe/London</option>
-              <option value="America/New_York">America/New_York</option>
-              <option value="America/Los_Angeles">America/Los_Angeles</option>
-              <option value="Asia/Tokyo">Asia/Tokyo</option>
-            </select>
-          </div>
-        </form>
-      </div>
-
-      <footer class="modal-footer">
-        <button class="ghost" type="button" onclick={() => (showCreateUserModal = false)} disabled={creatingUser}>
-          {$t('pages.users.modals.create.cancel')}
-        </button>
-        <button class="btn-primary" type="button" onclick={createUser} disabled={creatingUser}>
-          {creatingUser ? $t('pages.users.modals.create.creating') : $t('pages.users.modals.create.create')}
-        </button>
-      </footer>
+      <Button variant="secondary" size="sm" icon="plus" onclick={addAvailabilityRule}>
+        {$t('pages.users.modals.availability.addSlot')}
+      </Button>
     </div>
-  </div>
-{/if}
+
+    <ModalFooter>
+      <Button variant="ghost" onclick={() => (showAvailabilityModal = false)}>
+        {$t('pages.users.modals.availability.cancel')}
+      </Button>
+      <Button variant="primary" onclick={saveAvailability} loading={savingAvailability}>
+        {savingAvailability
+          ? $t('pages.users.modals.availability.saving')
+          : $t('pages.users.modals.availability.save')}
+      </Button>
+    </ModalFooter>
+  </ModalContent>
+</Modal>
+
+<Modal
+  open={showCreateUserModal}
+  onClose={() => (showCreateUserModal = false)}
+  size="md"
+>
+  <ModalContent>
+    <div class="modal-heading">
+      <Badge eyebrow tone="muted" label={$t('navigation.users')} />
+      <h3>{$t('pages.users.modals.create.title')}</h3>
+    </div>
+
+    <form
+      class="form-stack"
+      onsubmit={(event) => {
+        event.preventDefault();
+        createUser();
+      }}
+    >
+      <FormField
+        label={$t('pages.users.modals.create.emailLabel')}
+        help={$t('pages.users.modals.create.emailHelp')}
+      >
+        <input
+          id="email"
+          type="email"
+          bind:value={newUser.email}
+          placeholder="user@example.com"
+          required
+        />
+      </FormField>
+
+      <FormField
+        label={$t('pages.users.modals.create.nameLabel')}
+        help={$t('pages.users.modals.create.nameHelp')}
+      >
+        <input
+          id="displayName"
+          type="text"
+          bind:value={newUser.displayName}
+          placeholder="Alex Example"
+          required
+        />
+      </FormField>
+
+      <FormField label={$t('pages.users.modals.create.timezoneLabel')}>
+        <select id="timezone" bind:value={newUser.timezone}>
+          <option value="UTC">UTC</option>
+          <option value="Europe/Berlin">Europe/Berlin</option>
+          <option value="Europe/London">Europe/London</option>
+          <option value="America/New_York">America/New_York</option>
+          <option value="America/Los_Angeles">America/Los_Angeles</option>
+          <option value="Asia/Tokyo">Asia/Tokyo</option>
+        </select>
+      </FormField>
+    </form>
+
+    <ModalFooter>
+      <Button variant="ghost" onclick={() => (showCreateUserModal = false)} disabled={creatingUser}>
+        {$t('pages.users.modals.create.cancel')}
+      </Button>
+      <Button variant="primary" onclick={createUser} loading={creatingUser}>
+        {creatingUser ? $t('pages.users.modals.create.creating') : $t('pages.users.modals.create.create')}
+      </Button>
+    </ModalFooter>
+  </ModalContent>
+</Modal>
 
 <style>
+  .table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--aico-color-border-light);
+    border-radius: var(--blueprint-radius-lg);
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 780px;
+    font-size: 0.9rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: var(--blueprint-spacing-sm) var(--blueprint-spacing-md);
+    border-bottom: 1px solid var(--aico-color-border-light);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .data-table th {
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--aico-color-text-tertiary);
+  }
+
+  .data-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .identity-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--blueprint-spacing-sm);
+  }
+
+  .identity-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .identity-text small {
+    color: var(--aico-color-text-tertiary);
+  }
+
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--blueprint-spacing-xs);
+  }
+
+  .modal-heading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--blueprint-spacing-xs);
+  }
+
+  .modal-heading h3 {
+    margin: 0;
+  }
+
   .availability-editor {
     display: flex;
     flex-direction: column;
-    gap: var(--component-gap);
+    gap: var(--blueprint-spacing-sm);
   }
 
   .availability-row {
     display: grid;
-    grid-template-columns: 1fr 1fr auto 1fr auto;
-    gap: var(--component-gap-sm);
+    grid-template-columns: minmax(140px, 1fr) minmax(110px, 1fr) auto minmax(110px, 1fr) auto;
+    gap: var(--blueprint-spacing-xs);
     align-items: center;
+  }
+
+  .availability-row :global(.form-field) {
+    gap: 0;
+  }
+
+  .range-separator {
+    color: var(--aico-color-text-tertiary);
+    font-size: 0.85rem;
+    align-self: center;
   }
 
   .form-stack {
     display: flex;
     flex-direction: column;
-    gap: var(--component-gap);
+    gap: var(--blueprint-spacing-md);
+  }
+
+  @media (max-width: 720px) {
+    .availability-row {
+      grid-template-columns: 1fr;
+    }
+
+    .range-separator {
+      display: none;
+    }
   }
 </style>

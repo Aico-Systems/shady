@@ -55,6 +55,7 @@ services:
       - "5175:5175"
     environment:
       - VITE_BACKEND_URL=http://localhost:5006
+      - VITE_WIDGET_URL=http://localhost:5178
     volumes:
       - ./admin:/app
       - /app/node_modules
@@ -77,10 +78,28 @@ services:
       - "5174:5174"
     environment:
       - VITE_BACKEND_URL=http://localhost:5006
+      - VITE_WIDGET_URL=http://localhost:5178
+      - VITE_WIDGET_DEFAULT_ORG=aico-global
     volumes:
       - ./widget:/app
       - /app/node_modules
       - ./.env:/app/.env.development:ro
+    networks:
+      - shady_network
+    restart: unless-stopped
+
+  widget-embed:
+    build:
+      context: ./widget
+      dockerfile: Dockerfile
+    container_name: shady_widget_embed
+    ports:
+      - "5178:3001"
+    environment:
+      - WIDGET_PORT=3001
+      - VITE_BACKEND_URL=http://localhost:5006
+      - VITE_WIDGET_URL=http://localhost:5178
+      - VITE_WIDGET_DEFAULT_ORG=aico-global
     networks:
       - shady_network
     restart: unless-stopped

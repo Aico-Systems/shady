@@ -17,6 +17,21 @@ import { relations } from 'drizzle-orm';
  */
 
 // ============================================================================
+// ORGANIZATIONS
+// ============================================================================
+
+export const organizations = pgTable(
+  'organizations',
+  {
+    id: text('id').primaryKey(), // Logto organization id
+    name: text('name').notNull(),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow()
+  }
+);
+
+// ============================================================================
 // BOOKING USERS
 // ============================================================================
 
@@ -24,7 +39,9 @@ export const bookingUsers = pgTable(
   'booking_users',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    organizationId: text('organization_id').notNull(), // From Logto
+    organizationId: text('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
     logtoUserId: text('logto_user_id').notNull(), // From Logto
     email: text('email').notNull(),
     displayName: text('display_name').notNull(),
@@ -82,7 +99,9 @@ export const bookings = pgTable(
     bookingUserId: uuid('booking_user_id')
       .notNull()
       .references(() => bookingUsers.id, { onDelete: 'cascade' }),
-    organizationId: text('organization_id').notNull(), // Denormalized for queries
+    organizationId: text('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }), // Denormalized for queries
     startTime: timestamp('start_time').notNull(),
     endTime: timestamp('end_time').notNull(),
     visitorData: jsonb('visitor_data').notNull(), // { name, email, phone, custom fields, etc. }
@@ -129,7 +148,9 @@ export const calendarSyncState = pgTable(
 export const bookingConfigs = pgTable(
   'booking_configs',
   {
-    organizationId: text('organization_id').primaryKey(),
+    organizationId: text('organization_id')
+      .primaryKey()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
     bookingSlug: text('booking_slug').unique().notNull(), // Public-facing identifier (e.g., "acme-corp")
     visitorFields: jsonb('visitor_fields').default([
       { name: 'name', label: 'Full Name', type: 'text', required: true },
@@ -155,7 +176,17 @@ export const bookingConfigs = pgTable(
 // RELATIONS (for Drizzle ORM query builder)
 // ============================================================================
 
+export const organizationsRelations = relations(organizations, ({ many, one }) => ({
+  bookingUsers: many(bookingUsers),
+  bookings: many(bookings),
+  bookingConfig: one(bookingConfigs)
+}));
+
 export const bookingUsersRelations = relations(bookingUsers, ({ many, one }) => ({
+  organization: one(organizations, {
+    fields: [bookingUsers.organizationId],
+    references: [organizations.id]
+  }),
   availabilityRules: many(availabilityRules),
   bookings: many(bookings),
   syncState: one(calendarSyncState)
@@ -169,6 +200,10 @@ export const availabilityRulesRelations = relations(availabilityRules, ({ one })
 }));
 
 export const bookingsRelations = relations(bookings, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [bookings.organizationId],
+    references: [organizations.id]
+  }),
   bookingUser: one(bookingUsers, {
     fields: [bookings.bookingUserId],
     references: [bookingUsers.id]
@@ -182,9 +217,19 @@ export const calendarSyncStateRelations = relations(calendarSyncState, ({ one })
   })
 }));
 
+export const bookingConfigsRelations = relations(bookingConfigs, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [bookingConfigs.organizationId],
+    references: [organizations.id]
+  })
+}));
+
 // ============================================================================
 // TYPE EXPORTS (for use in services)
 // ============================================================================
+
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
 
 export type BookingUser = typeof bookingUsers.$inferSelect;
 export type NewBookingUser = typeof bookingUsers.$inferInsert;

@@ -5,12 +5,43 @@
   import { canManageConfig } from '../permissions';
   import { t } from '../../i18n';
   import runtimeConfig from '../config';
-  import { Copy, Settings2 } from '@lucide/svelte';
-  import { toastService } from '@aico/blueprint';
+  import {
+    toastService,
+    PageLayout,
+    SectionPanel,
+    Button,
+    FormField,
+    Toggle,
+    IconButton,
+    Badge,
+    StateBlock,
+  } from '@aico/blueprint';
 
   let config = $state<BookingConfig | null>(null);
   let loading = $state(true);
   let saving = $state(false);
+
+  let widgetActions = $derived([
+    {
+      label: get(t)('actions.copyCode'),
+      onClick: copyEmbedCode,
+      icon: 'copy',
+      variant: 'secondary' as const,
+    },
+  ]);
+
+  let fieldActions = $derived(
+    $canManageConfig
+      ? [
+          {
+            label: get(t)('pages.config.fields.addField'),
+            onClick: addVisitorField,
+            icon: 'plus',
+            variant: 'secondary' as const,
+          },
+        ]
+      : [],
+  );
 
   const fieldTypes = ['text', 'email', 'tel', 'textarea', 'select'] as const;
   const durationOptions = [15, 30, 45, 60];
@@ -96,348 +127,294 @@
 
   async function copyEmbedCode() {
     if (!config) return;
-    const code = `<script src="${runtimeConfig.WIDGET_URL}/widget.js"><\/script>
-
-<ac-booking org-id="${config.bookingSlug || config.organizationId}" api-url="${runtimeConfig.API_URL}"></ac-booking>`;
+    const code = `<script src="${runtimeConfig.WIDGET_URL}/widget.js"><\/script>\n\n<ac-booking org-id="${config.bookingSlug || config.organizationId}" api-url="${runtimeConfig.API_URL}"></ac-booking>`;
     await navigator.clipboard.writeText(code);
     toastService.success(get(t)('pages.config.notifications.codeCopied'));
   }
 </script>
 
-<div class="page config-page">
-  <div class="page-content">
-    <section class="page-surface">
-      <header class="page-header surface-toolbar">
-        <div class="surface-header">
-          <p class="eyebrow">{$t('navigation.config')}</p>
-          <h1>{$t('pages.config.title')}</h1>
-          <p>{$t('pages.config.subtitle')}</p>
-        </div>
-      </header>
-    </section>
+<PageLayout
+  title={$t('pages.config.title')}
+  description={$t('pages.config.subtitle')}
+  maxWidth="full"
+  spacing="md"
+>
+  {#if loading}
+    <SectionPanel>
+      <StateBlock variant="loading" message={$t('states.initializing')} />
+    </SectionPanel>
+  {:else if config}
+    <SectionPanel
+      title={$t('pages.config.widget.title')}
+      subtitle={$t('pages.config.widget.subtitle')}
+      icon="code-2"
+      actions={widgetActions}
+    >
 
-    {#if loading}
-      <section class="page-surface">
-        <div class="loading">{$t('states.initializing')}</div>
-      </section>
-    {:else if config}
-      <div class="config-container">
-        <section class="config-section page-surface">
-          <div class="section-header">
-            <h2>{$t('pages.config.widget.title')}</h2>
-            <p>{$t('pages.config.widget.subtitle')}</p>
-          </div>
+      <FormField
+        label={$t('pages.config.widget.slugLabel')}
+        help={$t('pages.config.widget.slugHelp')}
+      >
+        <input
+          id="booking-slug"
+          type="text"
+          bind:value={config.bookingSlug}
+          placeholder="my-company"
+          pattern="[a-z0-9-]+"
+          disabled={!$canManageConfig}
+        />
+      </FormField>
 
-          <div class="form-group">
-            <label for="booking-slug">{$t('pages.config.widget.slugLabel')}</label>
-            <input
-              id="booking-slug"
-              type="text"
-              bind:value={config.bookingSlug}
-              placeholder="my-company"
-              pattern="[a-z0-9-]+"
-              disabled={!$canManageConfig}
-            />
-            <small class="help-text">{$t('pages.config.widget.slugHelp')}</small>
-          </div>
+      <div class="widget-code">
+        <pre><code>&lt;script src="{runtimeConfig.WIDGET_URL}/widget.js"&gt;&lt;/script&gt;
 
-          <div class="widget-code">
-            <div class="widget-code__header">
-              <span>{$t('pages.config.widget.embedLabel')}</span>
-              <button class="ghost" type="button" onclick={copyEmbedCode}>
-                <Copy size={16} />
-                {$t('actions.copyCode')}
-              </button>
-            </div>
-            <pre><code>&lt;script src="{runtimeConfig.WIDGET_URL}/widget.js"&gt;&lt;/script&gt;
-
-&lt;ac-booking 
-  org-id="{config.bookingSlug || config.organizationId}" 
-  api-url="{runtimeConfig.API_URL}"
+&lt;ac-booking
+  org-id="{config.bookingSlug || config.organizationId}"
 &gt;&lt;/ac-booking&gt;</code></pre>
-          </div>
-        </section>
-
-        <section class="config-section page-surface">
-          <div class="section-header">
-            <h2>{$t('pages.config.fields.title')}</h2>
-            <p>{$t('pages.config.fields.subtitle')}</p>
-          </div>
-
-          <div class="fields-editor">
-            {#if config.visitorFields.length === 0}
-              <div class="empty-state-small">
-                {$t('pages.config.fields.empty')}
-              </div>
-            {:else}
-              {#each config.visitorFields as field, index}
-                <div class="field-item">
-                  <div class="field-index">
-                    <span>#{index + 1}</span>
-                    <div class="field-order">
-                      <button type="button" onclick={() => moveFieldUp(index)} disabled={index === 0}>
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        onclick={() => moveFieldDown(index)}
-                        disabled={index === config.visitorFields.length - 1}
-                      >
-                        ↓
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="field-controls">
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for={`field-name-${index}`}>{$t('pages.config.fields.fieldName')}</label>
-                        <input
-                          id={`field-name-${index}`}
-                          type="text"
-                          bind:value={field.name}
-                          placeholder="field_name"
-                          disabled={!$canManageConfig}
-                        />
-                      </div>
-                      <div class="form-group">
-                        <label for={`field-label-${index}`}>{$t('pages.config.fields.fieldLabel')}</label>
-                        <input
-                          id={`field-label-${index}`}
-                          type="text"
-                          bind:value={field.label}
-                          placeholder="Full name"
-                          disabled={!$canManageConfig}
-                        />
-                      </div>
-                      <div class="form-group">
-                        <label for={`field-type-${index}`}>{$t('pages.config.fields.fieldType')}</label>
-                        <select id={`field-type-${index}`} bind:value={field.type} disabled={!$canManageConfig}>
-                          {#each fieldTypes as type}
-                            <option value={type}>{$t(`pages.config.fields.types.${type}`)}</option>
-                          {/each}
-                        </select>
-                      </div>
-                      <div class="form-group checkbox-group">
-                        <label>
-                          <input type="checkbox" bind:checked={field.required} disabled={!$canManageConfig} />
-                          {$t('pages.config.fields.required')}
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {#if $canManageConfig}
-                    <button class="icon-only" type="button" onclick={() => removeVisitorField(index)}>
-                      ✕
-                    </button>
-                  {/if}
-                </div>
-              {/each}
-            {/if}
-
-            {#if $canManageConfig}
-              <button class="btn-secondary" type="button" onclick={addVisitorField}>
-                {$t('pages.config.fields.addField')}
-              </button>
-            {/if}
-          </div>
-        </section>
-
-        <section class="config-section page-surface">
-          <div class="section-header">
-            <h2>{$t('pages.config.booking.title')}</h2>
-            <p>{$t('pages.config.booking.subtitle')}</p>
-          </div>
-
-          <div class="settings-grid">
-            <div class="form-group">
-              <label for="booking-duration">{$t('pages.config.booking.duration')}</label>
-              <select id="booking-duration" bind:value={config.bookingDurationMinutes} disabled={!$canManageConfig}>
-                {#each durationOptions as duration}
-                  <option value={duration}>{duration} min</option>
-                {/each}
-              </select>
-              <small class="help-text">{$t('pages.config.booking.durationHelp')}</small>
-            </div>
-
-            <div class="form-group">
-              <label for="booking-advance-window">{$t('pages.config.booking.advanceWindow')}</label>
-              <input
-                id="booking-advance-window"
-                type="number"
-                bind:value={config.advanceBookingDays}
-                min="1"
-                max="365"
-                disabled={!$canManageConfig}
-              />
-              <small class="help-text">{$t('pages.config.booking.advanceHelp')}</small>
-            </div>
-
-            <div class="form-group">
-              <label for="booking-buffer">{$t('pages.config.booking.buffer')}</label>
-              <input
-                id="booking-buffer"
-                type="number"
-                bind:value={config.bufferMinutes}
-                min="0"
-                max="60"
-                step="5"
-                disabled={!$canManageConfig}
-              />
-              <small class="help-text">{$t('pages.config.booking.bufferHelp')}</small>
-            </div>
-          </div>
-        </section>
-
-        <section class="config-section page-surface">
-          <div class="section-header">
-            <h2>{$t('pages.config.email.title')}</h2>
-            <p>{$t('pages.config.email.subtitle')}</p>
-          </div>
-
-          <label class="email-toggle">
-            <input type="checkbox" bind:checked={config.emailEnabled} disabled={!$canManageConfig} />
-            <span>
-              <strong>{$t('pages.config.email.toggle')}</strong>
-              <small>{$t('pages.config.email.toggleHelp')}</small>
-            </span>
-          </label>
-
-          {#if !config.emailEnabled}
-            <div class="info-box warning">
-              <strong>{$t('pages.config.email.disabled')}</strong>
-              <p>{$t('pages.config.email.disabledHelp')}</p>
-            </div>
-          {:else}
-            <div class="info-box success">
-              <strong>{$t('pages.config.email.enabled')}</strong>
-              <p>{$t('pages.config.email.enabledHelp')}</p>
-            </div>
-          {/if}
-        </section>
-
-        <section class="config-section page-surface">
-          {#if $canManageConfig}
-            <div class="surface-actions end">
-              <button class="btn-primary" type="button" onclick={saveConfig} disabled={saving}>
-                <Settings2 size={18} />
-                <span>{saving ? $t('pages.config.save.saving') : $t('pages.config.save.cta')}</span>
-              </button>
-            </div>
-          {:else}
-            <div class="info-box warning">
-              <strong>{$t('pages.config.readonly.title')}</strong>
-              <p>{$t('pages.config.readonly.message')}</p>
-            </div>
-          {/if}
-        </section>
       </div>
-    {/if}
-  </div>
-</div>
+    </SectionPanel>
+
+    <SectionPanel
+      title={$t('pages.config.fields.title')}
+      subtitle={$t('pages.config.fields.subtitle')}
+      icon="list-ordered"
+      actions={fieldActions}
+    >
+
+      {#if config.visitorFields.length === 0}
+        <StateBlock variant="empty" message={$t('pages.config.fields.empty')} />
+      {:else}
+        <div class="field-stack">
+          {#each config.visitorFields as field, index}
+            <div class="field-item">
+              <div class="field-item-header">
+                <Badge tone="muted" size="sm" label={`#${index + 1}`} mono />
+                <div class="field-order-actions">
+                  <IconButton
+                    icon="arrow-up"
+                    label="Move up"
+                    variant="soft"
+                    size="sm"
+                    onClick={() => moveFieldUp(index)}
+                    disabled={index === 0 || !$canManageConfig}
+                  />
+                  <IconButton
+                    icon="arrow-down"
+                    label="Move down"
+                    variant="soft"
+                    size="sm"
+                    onClick={() => moveFieldDown(index)}
+                    disabled={index === config.visitorFields.length - 1 || !$canManageConfig}
+                  />
+                </div>
+              </div>
+
+              <div class="field-grid">
+                <FormField label={$t('pages.config.fields.fieldName')}>
+                  <input
+                    id={`field-name-${index}`}
+                    type="text"
+                    bind:value={field.name}
+                    placeholder="field_name"
+                    disabled={!$canManageConfig}
+                  />
+                </FormField>
+
+                <FormField label={$t('pages.config.fields.fieldLabel')}>
+                  <input
+                    id={`field-label-${index}`}
+                    type="text"
+                    bind:value={field.label}
+                    placeholder="Full name"
+                    disabled={!$canManageConfig}
+                  />
+                </FormField>
+
+                <FormField label={$t('pages.config.fields.fieldType')}>
+                  <select id={`field-type-${index}`} bind:value={field.type} disabled={!$canManageConfig}>
+                    {#each fieldTypes as type}
+                      <option value={type}>{$t(`pages.config.fields.types.${type}`)}</option>
+                    {/each}
+                  </select>
+                </FormField>
+
+                <div class="field-toggle-wrap">
+                  <Toggle
+                    checked={field.required}
+                    onChange={(checked) => (field.required = checked)}
+                    label={$t('pages.config.fields.required')}
+                    disabled={!$canManageConfig}
+                    size="sm"
+                  />
+                </div>
+              </div>
+
+              {#if $canManageConfig}
+                <div class="field-item-remove">
+                  <IconButton
+                    icon="x"
+                    label="Remove field"
+                    tone="danger"
+                    variant="soft"
+                    size="sm"
+                    onClick={() => removeVisitorField(index)}
+                  />
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </SectionPanel>
+
+    <SectionPanel title={$t('pages.config.booking.title')} subtitle={$t('pages.config.booking.subtitle')} icon="calendar-clock">
+      <div class="settings-grid">
+        <FormField label={$t('pages.config.booking.duration')} help={$t('pages.config.booking.durationHelp')}>
+          <select id="booking-duration" bind:value={config.bookingDurationMinutes} disabled={!$canManageConfig}>
+            {#each durationOptions as duration}
+              <option value={duration}>{duration} min</option>
+            {/each}
+          </select>
+        </FormField>
+
+        <FormField
+          label={$t('pages.config.booking.advanceWindow')}
+          help={$t('pages.config.booking.advanceHelp')}
+        >
+          <input
+            id="booking-advance-window"
+            type="number"
+            bind:value={config.advanceBookingDays}
+            min="1"
+            max="365"
+            disabled={!$canManageConfig}
+          />
+        </FormField>
+
+        <FormField label={$t('pages.config.booking.buffer')} help={$t('pages.config.booking.bufferHelp')}>
+          <input
+            id="booking-buffer"
+            type="number"
+            bind:value={config.bufferMinutes}
+            min="0"
+            max="60"
+            step="5"
+            disabled={!$canManageConfig}
+          />
+        </FormField>
+      </div>
+    </SectionPanel>
+
+    <SectionPanel title={$t('pages.config.email.title')} subtitle={$t('pages.config.email.subtitle')} icon="mail">
+      <Toggle
+        checked={config.emailEnabled}
+        onChange={(checked) => (config && (config.emailEnabled = checked))}
+        label={$t('pages.config.email.toggle')}
+        helpText={$t('pages.config.email.toggleHelp')}
+        disabled={!$canManageConfig}
+      />
+
+      {#if !config.emailEnabled}
+        <StateBlock
+          variant="empty"
+          title={$t('pages.config.email.disabled')}
+          message={$t('pages.config.email.disabledHelp')}
+        />
+      {:else}
+        <StateBlock
+          variant="empty"
+          title={$t('pages.config.email.enabled')}
+          message={$t('pages.config.email.enabledHelp')}
+        />
+      {/if}
+    </SectionPanel>
+
+    <SectionPanel>
+      {#if $canManageConfig}
+        <div class="save-actions">
+          <Button variant="primary" icon="settings-2" onclick={saveConfig} loading={saving}>
+            {saving ? $t('pages.config.save.saving') : $t('pages.config.save.cta')}
+          </Button>
+        </div>
+      {:else}
+        <StateBlock
+          variant="empty"
+          title={$t('pages.config.readonly.title')}
+          message={$t('pages.config.readonly.message')}
+        />
+      {/if}
+    </SectionPanel>
+  {/if}
+</PageLayout>
 
 <style>
-  .config-container {
-    display: flex;
-    flex-direction: column;
-    gap: var(--page-stack-gap);
-  }
-
-  .section-header h2 {
-    margin: 0 0 0.35rem 0;
-  }
-
-  .fields-editor {
-    display: flex;
-    flex-direction: column;
-    gap: var(--component-gap);
-  }
-
-  .field-item {
+  .widget-code {
     border: 1px solid var(--aico-color-border-light);
-    border-radius: 18px;
-    padding: 1rem;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: var(--component-gap);
-    align-items: center;
-    background: color-mix(in srgb, var(--aico-color-bg-primary) 96%, transparent);
-  }
-
-  .field-index {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-  }
-
-  .field-order button {
-    border: none;
-    background: color-mix(in srgb, var(--aico-grey-300) 20%, transparent);
-    border-radius: 10px;
-    width: 32px;
-    height: 32px;
-    font-weight: 700;
-  }
-
-  .field-controls {
-    width: 100%;
-  }
-
-  .checkbox-group label {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    font-weight: 600;
-  }
-
-  .widget-code__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
+    border-radius: var(--blueprint-radius-md);
+    background: var(--aico-color-bg-secondary);
+    padding: var(--blueprint-spacing-md);
   }
 
   .widget-code pre {
     margin: 0;
+    white-space: pre-wrap;
+    font-family: var(--aico-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-size: 0.85rem;
+  }
+
+  .field-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--blueprint-spacing-sm);
+  }
+
+  .field-item {
+    border: 1px solid var(--aico-color-border-light);
+    border-radius: var(--blueprint-radius-md);
+    padding: var(--blueprint-spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--blueprint-spacing-sm);
+  }
+
+  .field-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--blueprint-spacing-sm);
+  }
+
+  .field-order-actions {
+    display: flex;
+    gap: var(--blueprint-spacing-xs);
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--blueprint-spacing-sm);
+    align-items: end;
+  }
+
+  .field-toggle-wrap {
+    display: flex;
+    align-items: center;
+    padding-bottom: 2px;
+  }
+
+  .field-item-remove {
+    display: flex;
+    justify-content: flex-end;
   }
 
   .settings-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
+    gap: var(--blueprint-spacing-sm);
   }
 
-  .email-toggle {
+  .save-actions {
     display: flex;
-    gap: 0.75rem;
-    align-items: flex-start;
-    border: 1px solid var(--aico-color-border-light);
-    border-radius: 16px;
-    padding: 1rem;
+    justify-content: flex-end;
   }
-
-  .email-toggle input {
-    margin-top: 0.4rem;
-  }
-
-  .info-box {
-    border-radius: 16px;
-    padding: 1rem 1.25rem;
-    margin-top: 1rem;
-    border: 1px solid var(--aico-color-border-light);
-  }
-
-  .info-box.warning {
-    background: rgba(var(--aico-warning-rgb), 0.12);
-    border-color: rgba(var(--aico-warning-rgb), 0.4);
-  }
-
-  .info-box.success {
-    background: rgba(var(--aico-success-rgb), 0.12);
-    border-color: rgba(var(--aico-success-rgb), 0.3);
-  }
-
 </style>

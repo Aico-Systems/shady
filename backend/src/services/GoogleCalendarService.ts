@@ -1,5 +1,4 @@
 import { google, calendar_v3 } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
 import { config } from '../config';
 import { getLogger } from '../logger';
 import { db } from '../db';
@@ -9,7 +8,7 @@ import { eq } from 'drizzle-orm';
 const logger = getLogger('GoogleCalendarService');
 
 export class GoogleCalendarService {
-  private oauth2Client: OAuth2Client;
+  private oauth2Client: InstanceType<typeof google.auth.OAuth2>;
 
   constructor() {
     this.oauth2Client = new google.auth.OAuth2(

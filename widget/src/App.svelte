@@ -6,10 +6,19 @@
   import { t, locale } from './i18n';
   import { themeStore, type Theme } from './lib/stores/theme';
   import { onDestroy } from 'svelte';
+  import { runtimeConfig } from './lib/config';
 
-  let orgId = $state('org-c0giv3tx');
-  let apiUrl = $state('http://localhost:5006');
+  const query = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialOrg =
+    query?.get('org') ||
+    query?.get('orgId') ||
+    runtimeConfig.DEFAULT_ORG_ID ||
+    '';
+
+  let orgId = $state(initialOrg);
   let previewTheme = $state<Theme>('auto');
+  const hasOrgId = $derived(orgId.trim().length > 0);
+  const embedOrgId = $derived(hasOrgId ? orgId : 'your-booking-slug');
 
   const unsubscribe = themeStore.subscribe((value) => {
     previewTheme = value;
@@ -19,11 +28,11 @@
 
   const codeSnippet = $derived(
     [
-      '<script src="https://cdn.example.com/aico-booking.js"><\\/script>',
+      `<script src="${runtimeConfig.WIDGET_SCRIPT_URL}"><\\/script>`,
       '',
       `<ac-booking`,
-      `  org-id="${orgId}"`,
-      `  api-url="${apiUrl}"`,
+      `  org-id="${embedOrgId}"`,
+      `  api-url="${runtimeConfig.API_URL}"`,
       `  locale="${$locale}"`,
       `  theme="${previewTheme}"`,
       `></ac-booking>`,
@@ -37,6 +46,7 @@
       <LanguageSwitcher />
       <ThemeToggle />
     </div>
+    <p class="eyebrow">Booking Experience</p>
     <h1>{$t('app.title')}</h1>
     <p>{$t('app.subtitle')}</p>
     <div class="chip-list">
@@ -50,12 +60,19 @@
     <div class="panel">
       <h2>{$t('app.demo.livePreview')}</h2>
       <div class="preview-card">
-        <ac-booking
-          org-id={orgId}
-          api-url={apiUrl}
-          locale={$locale}
-          theme={previewTheme}
-        ></ac-booking>
+        {#if hasOrgId}
+          <ac-booking
+            org-id={orgId}
+            api-url={runtimeConfig.API_URL}
+            locale={$locale}
+            theme={previewTheme}
+          ></ac-booking>
+        {:else}
+          <div class="preview-empty">
+            <h3>{$t('app.demo.previewEmptyTitle')}</h3>
+            <p>{$t('app.demo.previewEmptyDescription')}</p>
+          </div>
+        {/if}
       </div>
     </div>
 
@@ -65,12 +82,7 @@
 
       <div class="form-group">
         <label for="org-input">Org ID / Slug</label>
-        <input id="org-input" type="text" bind:value={orgId} />
-      </div>
-
-      <div class="form-group">
-        <label for="api-url">API URL</label>
-        <input id="api-url" type="text" bind:value={apiUrl} />
+        <input id="org-input" type="text" bind:value={orgId} placeholder="aico-global" />
       </div>
 
       <div class="code-card">

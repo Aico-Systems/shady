@@ -6,6 +6,8 @@
       "livePreview": "Live widget preview",
       "embedTitle": "Drop-in embed code",
       "embedDescription": "Copy, paste and configure with your organization slug.",
+      "previewEmptyTitle": "Add an organization slug to preview the widget",
+      "previewEmptyDescription": "Use a booking slug such as aico-global or pass ?org=your-slug in the URL to load a live preview.",
       "codeTitle": "HTML snippet",
       "chips": [
         "Web component",

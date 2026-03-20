@@ -8,10 +8,10 @@ const BASE_URL = config.API_URL;
 async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const headers = new Headers(options?.headers);
-  const token = auth.getAccessToken
-    ? await auth.getAccessToken(config.LOGTO_API_RESOURCE)
-    : null;
   const organization = get(currentOrganization);
+  const token = auth.getAccessToken
+    ? await auth.getAccessToken(config.LOGTO_API_RESOURCE, organization?.id)
+    : null;
 
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);

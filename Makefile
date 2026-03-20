@@ -3,7 +3,7 @@
 # =============================================================================
 
 COMPOSE = docker compose -f docker-compose.yml
-SERVICES = postgres backend admin widget-dev
+SERVICES = postgres backend admin widget-dev widget-embed
 
 .DEFAULT_GOAL := help
 
@@ -48,7 +48,8 @@ up:
 	@echo "✅ Stack running:"
 	@echo "   Backend:  http://localhost:5006"
 	@echo "   Admin:    http://localhost:5175"
-	@echo "   Widget:   http://localhost:5174"
+	@echo "   Widget demo:   http://localhost:5174"
+	@echo "   Widget embed:  http://localhost:5178/widget.js"
 
 down:
 	$(COMPOSE) down
@@ -79,9 +80,9 @@ db-studio:
 	@echo "🎨 Drizzle Studio: https://local.drizzle.studio?port=4985&host=localhost"
 
 db-migrate:
-	@echo "Generating and pushing migrations..."
-	@cd backend && bunx drizzle-kit push
-	@echo "✅ Migrations applied"
+	@echo "Pushing schema in the backend container..."
+	@$(COMPOSE) run --rm backend bunx drizzle-kit push --force
+	@echo "✅ Schema applied"
 
 # =============================================================================
 # Logto Management

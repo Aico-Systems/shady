@@ -9,6 +9,8 @@ import { bookingService } from '../services/BookingService';
 import { config } from '../config';
 import type { UpdateAvailabilityRequest, UpdateBookingConfigRequest } from '../types';
 import { BOOKING_SCOPES, hasAnyScope } from '../utils/bookingScopes';
+import { logtoManagementService } from '../services/logtoManagementService';
+import { organizationSyncService } from '../services/organizationSyncService';
 
 const logger = getLogger('adminRoutes');
 
@@ -28,6 +30,8 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
   }
 
   try {
+    await organizationSyncService.ensureOrganization(userContext.organizationId);
+
     // Sync current user - auto-create booking user from Logto user
     if (path === '/api/admin/users/sync' && method === 'POST') {
       const denied = requireScopes(userContext, [
@@ -169,16 +173,12 @@ async function handleSyncCurrentUser(userContext: any): Promise<Response> {
 
   // Get user info from Logto Management API
   try {
-    const managementToken = await getLogtoManagementToken();
-    const userInfoResponse = await fetch(`${config.LOGTO_ENDPOINT}/api/users/${logtoUserId}`, {
-      headers: { Authorization: `Bearer ${managementToken}` }
-    });
+    await organizationSyncService.ensureOrganization(orgId);
 
-    if (!userInfoResponse.ok) {
-      throw new Error('Failed to fetch user info from Logto');
+    const userInfo = await logtoManagementService.getUser(logtoUserId);
+    if (!userInfo) {
+      throw new Error(`Logto user ${logtoUserId} not found`);
     }
-
-    const userInfo = await userInfoResponse.json();
 
     // Create booking user
     const [bookingUser] = await db.insert(bookingUsers).values({
@@ -201,23 +201,6 @@ async function handleSyncCurrentUser(userContext: any): Promise<Response> {
     logger.error('Failed to sync user', { error: error.message, logtoUserId });
     return errorResponse(`Failed to sync user: ${error.message}`, 500);
   }
-}
-
-async function getLogtoManagementToken(): Promise<string> {
-  const response = await fetch(`${config.LOGTO_ENDPOINT}/oidc/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'client_credentials',
-      resource: 'https://default.logto.app/api',
-      scope: 'all',
-      client_id: config.LOGTO_MANAGEMENT_APP_ID!,
-      client_secret: config.LOGTO_MANAGEMENT_APP_SECRET!
-    })
-  });
-
-  const data = await response.json();
-  return data.access_token;
 }
 
 // GET /api/admin/users
@@ -427,19 +410,14 @@ async function handleGetBookingStats(orgId: string): Promise<Response> {
 
 // GET /api/admin/config
 async function handleGetConfig(orgId: string): Promise<Response> {
+  await organizationSyncService.ensureOrganization(orgId);
+
   let config = await db.query.bookingConfigs.findFirst({
     where: eq(bookingConfigs.organizationId, orgId)
   });
 
   if (!config) {
-    // Create default config with auto-generated slug
-    // Use first 8 chars of org ID as default slug (can be customized later)
-    const defaultSlug = `org-${orgId.substring(0, 8)}`;
-    
-    [config] = await db.insert(bookingConfigs).values({
-      organizationId: orgId,
-      bookingSlug: defaultSlug
-    }).returning();
+    throw new Error(`Booking config missing after organization sync: ${orgId}`);
   }
 
   return jsonResponse({ success: true, data: config });
@@ -448,6 +426,7 @@ async function handleGetConfig(orgId: string): Promise<Response> {
 // PUT /api/admin/config
 async function handleUpdateConfig(request: Request, orgId: string): Promise<Response> {
   const body: UpdateBookingConfigRequest = await request.json();
+  await organizationSyncService.ensureOrganization(orgId);
 
   const [updated] = await db.update(bookingConfigs)
     .set({
@@ -458,14 +437,7 @@ async function handleUpdateConfig(request: Request, orgId: string): Promise<Resp
     .returning();
 
   if (!updated) {
-    // Create if doesn't exist
-    const defaultSlug = body.bookingSlug || `org-${orgId.substring(0, 8)}`;
-    const [created] = await db.insert(bookingConfigs).values({
-      organizationId: orgId,
-      bookingSlug: defaultSlug,
-      ...body
-    }).returning();
-    return jsonResponse({ success: true, data: created });
+    throw new Error(`Booking config missing after organization sync: ${orgId}`);
   }
 
   return jsonResponse({ success: true, data: updated });

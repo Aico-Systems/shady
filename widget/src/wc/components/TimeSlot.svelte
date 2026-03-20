@@ -37,15 +37,15 @@
   }
 
   .time-slot:hover {
-    border-color: color-mix(in srgb, var(--aico-mint) 30%, var(--aico-color-border-light));
+    border-color: color-mix(in srgb, var(--accent-color-primary) 30%, var(--aico-color-border-light));
     box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
   }
 
   .time-slot.selected {
-    background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
-    color: white;
+    background: var(--surface-gradient);
+    color: var(--aico-color-text-inverse);
     border-color: transparent;
-    box-shadow: 0 18px 32px rgba(var(--aico-mint-rgb), 0.4);
+    box-shadow: 0 18px 32px rgba(var(--brand-petrol-rgb), 0.35);
   }
 
   .time {

@@ -171,8 +171,8 @@
   input:focus,
   textarea:focus {
     outline: none;
-    border-color: var(--aico-mint);
-    box-shadow: 0 0 0 3px rgba(var(--aico-mint-rgb), 0.25);
+    border-color: var(--accent-color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-primary-rgb), 0.25);
   }
 
   input::placeholder,
@@ -202,11 +202,11 @@
   }
 
   .ghost:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--aico-mint) 35%, var(--aico-color-border-light));
+    border-color: color-mix(in srgb, var(--accent-color-primary) 35%, var(--aico-color-border-light));
   }
 
   .ghost:focus-visible {
-    outline: 2px solid rgba(var(--aico-mint-rgb), 0.5);
+    outline: 2px solid rgba(var(--accent-color-primary-rgb), 0.5);
     outline-offset: 2px;
   }
 
@@ -214,11 +214,11 @@
     border: none;
     border-radius: 999px;
     padding: 0.6rem 1.4rem;
-    background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
-    color: white;
+    background: var(--surface-gradient);
+    color: var(--aico-color-text-inverse);
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 12px 24px rgba(var(--aico-mint-rgb), 0.35);
+    box-shadow: 0 12px 24px rgba(var(--brand-petrol-rgb), 0.3);
     transition: var(--transition-button);
   }
 

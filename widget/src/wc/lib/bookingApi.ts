@@ -1,3 +1,5 @@
+import { runtimeConfig } from '../../lib/config';
+
 /**
  * Booking Widget API Client
  * Communicates with the public booking API endpoints
@@ -48,7 +50,7 @@ export class BookingApi {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || 'http://localhost:5006';
+    this.baseUrl = (baseUrl || runtimeConfig.API_URL).replace(/\/$/, '');
   }
 
   /**

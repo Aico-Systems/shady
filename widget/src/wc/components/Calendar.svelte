@@ -139,7 +139,7 @@
   }
 
   .nav-button:hover {
-    border-color: color-mix(in srgb, var(--aico-mint) 35%, var(--aico-color-border-light));
+    border-color: color-mix(in srgb, var(--accent-color-primary) 35%, var(--aico-color-border-light));
     box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
   }
 
@@ -168,16 +168,16 @@
   }
 
   .day:hover:not(.disabled) {
-    background: color-mix(in srgb, var(--aico-mint) 8%, transparent);
+    background: color-mix(in srgb, var(--accent-color-primary) 10%, transparent);
   }
 
   .day.today {
-    border-color: color-mix(in srgb, var(--aico-mint) 45%, transparent);
+    border-color: color-mix(in srgb, var(--accent-color-primary) 45%, transparent);
   }
 
   .day.selected {
-    background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
-    color: white;
+    background: var(--surface-gradient);
+    color: var(--aico-color-text-inverse);
   }
 
   .day.disabled {

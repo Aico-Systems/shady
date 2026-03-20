@@ -6,6 +6,8 @@
       "livePreview": "Live-Vorschau",
       "embedTitle": "Einfacher Embed-Code",
       "embedDescription": "Einfügen, Organisation konfigurieren, fertig.",
+      "previewEmptyTitle": "Organisation-Slug eingeben, um das Widget anzuzeigen",
+      "previewEmptyDescription": "Verwende einen Booking-Slug wie aico-global oder übergib ?org=dein-slug in der URL für eine Live-Vorschau.",
       "codeTitle": "HTML Snippet",
       "chips": [
         "Web Component",

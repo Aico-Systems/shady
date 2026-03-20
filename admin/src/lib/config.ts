@@ -36,7 +36,7 @@ const LOGTO_APP_ID = getRequiredConfig("VITE_LOGTO_APP_ID");
 const LOGTO_API_RESOURCE = getRequiredConfig("VITE_LOGTO_API_RESOURCE");
 const API_URL = getRequiredConfig("VITE_BACKEND_URL");
 const WIDGET_URL =
-	readRuntimeValue("VITE_WIDGET_URL") || "http://localhost:5174";
+	readRuntimeValue("VITE_WIDGET_URL") || "http://localhost:5178";
 
 const apiUrl = new URL(API_URL);
 

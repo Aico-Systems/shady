@@ -16,9 +16,11 @@ RUN bun install --frozen-lockfile
 
 # Copy source and config
 COPY backend/src ./src
+COPY backend/scripts ./scripts
 COPY backend/tsconfig.json ./
 COPY backend/drizzle.config.ts ./
+RUN chmod +x ./scripts/start.sh
 
 EXPOSE 5006
 
-CMD ["bun", "src/main.ts"]
+CMD ["./scripts/start.sh"]

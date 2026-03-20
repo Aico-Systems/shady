@@ -17,6 +17,7 @@ The admin no longer vendors a nested `blueprint` submodule. Local development us
 - Logto authentication for admin portal
 - Multi-tenant organization support
 - Docker Compose stack with dedicated ports that do not overlap the current AICO dev ports
+- Automatic schema push and Logto organization sync on backend startup
 
 🚧 **Active cleanup areas:**
 - Production hardening for secrets and OAuth credential handling
@@ -35,7 +36,7 @@ shady/
 │   │   ├── config/
 │   │   │   └── index.ts      ✅ Configuration loader
 │   │   ├── db/
-│   │   │   ├── schema.ts     ✅ Drizzle schema (5 tables)
+│   │   │   ├── schema.ts     ✅ Drizzle schema
 │   │   │   ├── index.ts      ✅ Database connection
 │   │   │   └── init/
 │   │   │       └── 01_extensions.sql  ✅ SQL init
@@ -66,24 +67,28 @@ shady/
 
 ### Tables Created
 
-1. **booking_users** - Users who can be booked (linked to Logto)
+1. **organizations** - Local mirror of Logto organizations
+   - Synced at backend startup and on-demand from Logto
+   - Source of truth for local booking configuration
+
+2. **booking_users** - Users who can be booked (linked to Logto)
    - Google Calendar connection status
    - Timezone, display name, email
 
-2. **availability_rules** - Weekly schedule per user
+3. **availability_rules** - Weekly schedule per user
    - Day of week (0-6)
    - Start/end times (HH:mm format)
 
-3. **bookings** - Appointments
+4. **bookings** - Appointments
    - Visitor data (JSONB - configurable fields)
    - Google Calendar event ID
    - Google Meet link
    - Status (confirmed/cancelled)
 
-4. **calendar_sync_state** - Google Calendar sync tokens
+5. **calendar_sync_state** - Google Calendar sync tokens
    - Incremental sync support
 
-5. **booking_configs** - Organization settings
+6. **booking_configs** - Organization settings
    - Configurable visitor form fields
    - Booking duration, advance window
    - Email templates
@@ -118,6 +123,7 @@ shady/
    ```bash
    make up
    ```
+   The backend now pushes the schema and syncs Logto organizations automatically on startup.
 
 3. **Open Drizzle Studio if needed:**
    ```bash
@@ -128,6 +134,7 @@ shady/
    ```bash
    make db-migrate
    ```
+   This runs inside the backend container, so it does not depend on host-side Postgres connectivity.
 
 ## Notes
 

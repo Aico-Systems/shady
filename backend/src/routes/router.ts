@@ -3,6 +3,7 @@ import { getLogger } from '../logger';
 import { config } from '../config';
 import { handlePublicRoutes } from './publicRoutes';
 import { handleAdminRoutes } from './adminRoutes';
+import { handleOrganizationRoutes } from './organizationRoutes';
 
 const logger = getLogger('router');
 
@@ -56,6 +57,21 @@ export async function handleRoute(request: Request): Promise<Response> {
     // Public routes (no authentication)
     if (path.startsWith('/api/public/')) {
       return await handlePublicRoutes(request, url);
+    }
+
+    if (path.startsWith('/api/organizations')) {
+      const authHeader = request.headers.get('Authorization');
+
+      try {
+        const userContext = await validateLogtoToken(authHeader);
+        attachUserContext(request, userContext);
+        return await handleOrganizationRoutes(request, url);
+      } catch (authError) {
+        if (authError instanceof LogtoAuthError) {
+          return errorResponse(authError.message, authError.status);
+        }
+        throw authError;
+      }
     }
 
     // Admin routes (require Logto authentication)

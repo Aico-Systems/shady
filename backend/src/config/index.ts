@@ -41,6 +41,7 @@ export const config = {
 
   // Logto
   LOGTO_ENDPOINT: getEnv('LOGTO_ENDPOINT'),
+  LOGTO_BACKEND_ENDPOINT: getEnvOptional('LOGTO_BACKEND_ENDPOINT', getEnv('LOGTO_ENDPOINT')),
   LOGTO_ISSUER: getEnv('LOGTO_ISSUER'),
   LOGTO_JWKS_URL: getEnvOptional('LOGTO_JWKS_URL', `${getEnv('LOGTO_ENDPOINT')}/oidc/jwks`),
   LOGTO_API_RESOURCE: getEnvOptional('LOGTO_API_RESOURCE', 'https://api.aico.local'),
@@ -60,5 +61,5 @@ export const config = {
   // URLs
   BACKEND_URL: getEnvOptional('BACKEND_URL', 'http://localhost:5006'),
   ADMIN_URL: getEnvOptional('ADMIN_URL', 'http://localhost:5175'),
-  WIDGET_URL: getEnvOptional('WIDGET_URL', 'http://localhost:5174'),
+  WIDGET_URL: getEnvOptional('WIDGET_URL', 'http://localhost:5178'),
 };

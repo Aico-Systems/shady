@@ -386,12 +386,19 @@
 <style>
   @import '../theme.css';
 
+  :host {
+    display: block;
+    width: 100%;
+  }
+
   :global(:root) {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--aico-font-family-default);
   }
 
   .booking-widget {
-    width: min(520px, 100%);
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
     border-radius: 32px;
     padding: 2rem;
     background: color-mix(in srgb, var(--aico-color-bg-primary) 96%, transparent);
@@ -410,7 +417,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 15% 0%, rgba(var(--aico-mint-rgb), 0.18), transparent 55%);
+    background: radial-gradient(circle at 15% 0%, rgba(var(--brand-signal-rgb), 0.16), transparent 55%);
     opacity: 0.9;
     pointer-events: none;
   }
@@ -456,7 +463,7 @@
 
   .step.done,
   .step.active {
-    background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
+    background: var(--surface-gradient);
   }
 
   .error-banner {
@@ -536,12 +543,12 @@
   }
 
   .ghost:hover {
-    border-color: color-mix(in srgb, var(--aico-mint) 35%, var(--aico-color-border-light));
+    border-color: color-mix(in srgb, var(--accent-color-primary) 35%, var(--aico-color-border-light));
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
   }
 
   .ghost:focus-visible {
-    outline: 2px solid rgba(var(--aico-mint-rgb), 0.5);
+    outline: 2px solid rgba(var(--accent-color-primary-rgb), 0.5);
     outline-offset: 2px;
   }
 

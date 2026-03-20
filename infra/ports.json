@@ -42,11 +42,11 @@
     "dev": {
       "DOMAIN_ADMIN": "localhost:5175",
       "DOMAIN_API": "localhost:5006",
-      "DOMAIN_WIDGET": "localhost:5174",
+      "DOMAIN_WIDGET": "localhost:5178",
 
       "BACKEND_PORT": 5006,
       "ADMIN_PORT": 5175,
-      "WIDGET_PORT": 5174,
+      "WIDGET_PORT": 5178,
 
       "POSTGRES_USER": "booking_user",
       "POSTGRES_DB": "booking_service",
@@ -59,12 +59,12 @@
       "VITE_BACKEND_URL": "http://localhost:5006",
       "VITE_LOGTO_ENDPOINT": "http://localhost:3001",
       "VITE_LOGTO_API_RESOURCE": "https://api.booking-service.local",
-      "VITE_WIDGET_URL": "http://localhost:5174",
+      "VITE_WIDGET_URL": "http://localhost:5178",
       "VITE_WIDGET_DEFAULT_ORG": "aico-global",
 
       "BACKEND_URL": "http://localhost:5006",
       "ADMIN_URL": "http://localhost:5175",
-      "WIDGET_URL": "http://localhost:5174",
+      "WIDGET_URL": "http://localhost:5178",
 
       "GOOGLE_REDIRECT_URI": "http://localhost:5006/api/admin/google/callback"
     },

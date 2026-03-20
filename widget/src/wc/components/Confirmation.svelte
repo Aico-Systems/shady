@@ -111,8 +111,8 @@ import { get } from 'svelte/store';
     height: 64px;
     border-radius: 20px;
     margin: 0 auto;
-    background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
-    color: white;
+    background: var(--surface-gradient);
+    color: var(--aico-color-text-inverse);
     font-size: 2rem;
     display: flex;
     align-items: center;
@@ -145,7 +145,7 @@ import { get } from 'svelte/store';
   }
 
   .details a {
-    color: var(--aico-mint);
+    color: var(--brand-petrol);
     font-weight: 600;
     text-decoration: none;
   }
@@ -162,21 +162,21 @@ import { get } from 'svelte/store';
   }
 
   .actions button:hover {
-    border-color: color-mix(in srgb, var(--aico-mint) 35%, var(--aico-color-border-light));
+    border-color: color-mix(in srgb, var(--accent-color-primary) 35%, var(--aico-color-border-light));
   }
 
   .primary {
     border: none;
     border-radius: 999px;
     padding: 0.75rem;
-    background: linear-gradient(135deg, var(--aico-mint), var(--aico-flieder));
-    color: white;
+    background: var(--surface-gradient);
+    color: var(--aico-color-text-inverse);
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition-button);
   }
 
   .primary:hover {
-    box-shadow: 0 15px 30px rgba(var(--aico-mint-rgb), 0.35);
+    box-shadow: 0 15px 30px rgba(var(--brand-petrol-rgb), 0.3);
   }
 </style>
