@@ -262,7 +262,7 @@ class LogtoManagementService {
   }
 
   async listOrganizationUsers(orgId: string): Promise<Array<{ user: LogtoUser; organizationRoles: Array<{ id: string; name: string }> }>> {
-    const data = await this.request<unknown>('GET', `/organizations/${orgId}/users?page=1&page_size=200`);
+    const data = await this.request<unknown>('GET', `/organizations/${orgId}/users`);
     const items = this.asList<any>(data);
     return items.map((item: any) => ({
       user: item.user ?? item,
