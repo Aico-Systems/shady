@@ -152,8 +152,8 @@ async function handleSyncCurrentUser(userContext: any): Promise<Response> {
     return errorResponse('User ID and organization required', 400);
   }
 
-  // Check if user already exists
-  const existing = await db.query.bookingUsers.findFirst({
+  // Check if user already exists (by logtoUserId first, then email fallback)
+  let existing = await db.query.bookingUsers.findFirst({
     where: and(
       eq(bookingUsers.organizationId, orgId),
       eq(bookingUsers.logtoUserId, logtoUserId)
@@ -162,12 +162,12 @@ async function handleSyncCurrentUser(userContext: any): Promise<Response> {
 
   if (existing) {
     logger.info('User already synced', { logtoUserId, bookingUserId: existing.id });
-    return jsonResponse({ 
-      success: true, 
-      data: { 
-        ...existing, 
-        alreadyExists: true 
-      } 
+    return jsonResponse({
+      success: true,
+      data: {
+        ...existing,
+        alreadyExists: true
+      }
     });
   }
 
@@ -180,11 +180,30 @@ async function handleSyncCurrentUser(userContext: any): Promise<Response> {
       throw new Error(`Logto user ${logtoUserId} not found`);
     }
 
-    // Create booking user
+    const email = userInfo.primaryEmail || userInfo.username || `user-${logtoUserId}@unknown.local`;
+
+    // Fallback: match by email within org (handles Logto reseed where user IDs change)
+    existing = await db.query.bookingUsers.findFirst({
+      where: and(
+        eq(bookingUsers.organizationId, orgId),
+        eq(bookingUsers.email, email)
+      )
+    });
+
+    if (existing) {
+      const [updated] = await db.update(bookingUsers)
+        .set({ logtoUserId, displayName: userInfo.name || existing.displayName })
+        .where(eq(bookingUsers.id, existing.id))
+        .returning();
+      logger.info('User re-linked after Logto ID change', { logtoUserId, oldLogtoUserId: existing.logtoUserId, bookingUserId: existing.id });
+      return jsonResponse({ success: true, data: { ...updated, alreadyExists: true } });
+    }
+
+    // Create new booking user
     const [bookingUser] = await db.insert(bookingUsers).values({
       organizationId: orgId,
-      logtoUserId: logtoUserId,
-      email: userInfo.primaryEmail || userInfo.username || `user-${logtoUserId}@unknown.local`,
+      logtoUserId,
+      email,
       displayName: userInfo.name || userInfo.username || 'User',
       timezone: 'UTC',
       isActive: true
