@@ -32,7 +32,7 @@ export const config = {
   GOOGLE_CLIENT_ID: getEnv('GOOGLE_CLIENT_ID'),
   GOOGLE_CLIENT_SECRET: getEnv('GOOGLE_CLIENT_SECRET'),
   GOOGLE_REDIRECT_URI: getEnv('GOOGLE_REDIRECT_URI'),
-  GOOGLE_SCOPES: getEnvOptional('GOOGLE_SCOPES', 'https://www.googleapis.com/auth/calendar.events'),
+  GOOGLE_SCOPES: getEnvOptional('GOOGLE_SCOPES', 'https://www.googleapis.com/auth/calendar'),
 
   // MailSend
   MAILSEND_API_TOKEN: getEnvOptional('MAILSEND_API_TOKEN', ''),
