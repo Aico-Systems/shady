@@ -6,7 +6,20 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["svelte", "vite/client"],
+    "baseUrl": ".",
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "paths": {
+      "@aico/blueprint": ["./blueprint/src", "../../blueprint/src"],
+      "@aico/blueprint/*": ["./blueprint/src/*", "../../blueprint/src/*"],
+      "@aico/model-catalog": ["../../backend/model-catalog/src"],
+      "@aico/model-catalog/*": ["../../backend/model-catalog/src/*"],
+      "@aico/entity-schema": ["../../backend/entity-schema/src"],
+      "@aico/entity-schema/*": ["../../backend/entity-schema/src/*"],
+      "@aico/flow-schema": ["../../backend/flow-schema/src"],
+      "@aico/flow-schema/*": ["../../backend/flow-schema/src/*"],
+      "@typescript-eslint/types": ["./src/types/typescript-eslint.d.ts"]
+    },
+    "types": ["svelte", "vite/client", "node"],
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
@@ -21,5 +34,17 @@
     "checkJs": true,
     "moduleDetection": "force"
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "src/**/*.d.ts",
+    "../../blueprint/src/**/*.ts",
+    "../../blueprint/src/**/*.svelte",
+    "../../backend/model-catalog/src/**/*.ts",
+    "../../backend/entity-schema/src/**/*.ts",
+    "../../backend/flow-schema/src/**/*.ts",
+    "./blueprint/src/**/*.ts",
+    "./blueprint/src/**/*.svelte"
+  ]
 }

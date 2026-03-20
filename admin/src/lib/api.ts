@@ -1,10 +1,34 @@
 // API client for booking service backend
+import { auth, currentOrganization } from "@aico/blueprint";
+import { get } from "svelte/store";
+import config from "./config";
 
-const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5006';
+const BASE_URL = config.API_URL;
 
 async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
-  const response = await fetch(url, options);
+  const headers = new Headers(options?.headers);
+  const token = auth.getAccessToken
+    ? await auth.getAccessToken(config.LOGTO_API_RESOURCE)
+    : null;
+  const organization = get(currentOrganization);
+
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  if (organization?.id && !headers.has("X-Organization-Id")) {
+    headers.set("X-Organization-Id", organization.id);
+  }
+
+  if (options?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers
+  });
 
   if (!response.ok) {
     const error = await response.text();
@@ -84,6 +108,11 @@ export interface BookingStats {
 
 // Users API
 export const usersApi = {
+  syncCurrentUser: () =>
+    apiCall<BookingUser>('/api/admin/users/sync', {
+      method: 'POST'
+    }),
+
   list: () => apiCall<BookingUser[]>('/api/admin/users'),
 
   get: (id: string) => apiCall<BookingUser>(`/api/admin/users/${id}`),
@@ -135,8 +164,12 @@ export const bookingsApi = {
     startDate?: string;
     endDate?: string;
   }) => {
-    const query = new URLSearchParams(params as Record<string, string>).toString();
-    return apiCall<BookingWithUser[]>(`/api/admin/bookings?${query}`);
+    const filteredParams = Object.fromEntries(
+      Object.entries(params ?? {}).filter(([, value]) => value !== undefined && value !== null && value !== "")
+    );
+    const query = new URLSearchParams(filteredParams).toString();
+    const path = query ? `/api/admin/bookings?${query}` : '/api/admin/bookings';
+    return apiCall<BookingWithUser[]>(path);
   },
 
   cancel: (id: string, reason?: string) =>

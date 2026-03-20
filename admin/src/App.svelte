@@ -5,52 +5,53 @@
 		authReady,
 		currentOrganization,
 		isAuthenticated,
+		openAccountSettings,
 		user,
 		initLogtoAuth,
+		MainLayout,
+		defineConfig,
+		initializeNavigation,
+		setNavigationPages,
+		ToastContainer,
+		type AppConfig,
+		type PageDefinition,
 	} from "@aico/blueprint";
+	import runtimeConfig from "./lib/config";
+	import { ALL_BOOKING_SCOPES } from "./lib/scopes";
 	import UsersPage from "./lib/pages/UsersPage.svelte";
 	import BookingsPage from "./lib/pages/BookingsPage.svelte";
 	import ConfigPage from "./lib/pages/ConfigPage.svelte";
 	import { t } from "./i18n";
 
-	import {
-		MainLayout,
-		defineConfig,
-		initializeNavigation,
-		setNavigationPages,
-		type AppConfig,
-		type PageDefinition,
-		ToastContainer,
-	} from "@aico/blueprint";
-
-	type PageKey = "users" | "bookings" | "config";
-
 	initLogtoAuth({
-		logtoEndpoint:
-			import.meta.env.VITE_LOGTO_ENDPOINT || "http://localhost:3001",
-		logtoAppId: import.meta.env.VITE_LOGTO_APP_ID || "",
-		logtoApiResource:
-			import.meta.env.VITE_LOGTO_API_RESOURCE ||
-			"https://api.booking-service.local",
-		apiUrl: import.meta.env.VITE_BACKEND_URL || "http://localhost:5006",
+		logtoEndpoint: runtimeConfig.LOGTO_ENDPOINT,
+		logtoAppId: runtimeConfig.LOGTO_APP_ID,
+		logtoApiResource: runtimeConfig.LOGTO_API_RESOURCE,
+		apiUrl: runtimeConfig.API_URL,
 		autoSignIn: false,
+		scopes: [
+			"openid",
+			"profile",
+			"email",
+			"organizations",
+			"urn:logto:scope:organizations",
+			"urn:logto:scope:organization_roles",
+			...ALL_BOOKING_SCOPES,
+		],
 	});
 
-	const pages: Record<
-		PageKey,
-		typeof UsersPage | typeof BookingsPage | typeof ConfigPage
-	> = {
-		users: UsersPage,
-		bookings: BookingsPage,
-		config: ConfigPage,
+	const authStores = {
+		isAuthenticated,
+		user,
+		authReady,
 	};
 
 	// Configure the app using blueprint's structure
-	const config: AppConfig = defineConfig({
+	const appConfig: AppConfig = defineConfig({
 		app: {
-			name: "Admin Panel",
-			description: "Booking Management",
-			version: "1.0.0",
+			name: runtimeConfig.APP_NAME,
+			description: "Standalone booking-service operations console",
+			version: runtimeConfig.APP_VERSION,
 		},
 		theme: {
 			navigationTheme: "dark",
@@ -58,6 +59,15 @@
 		sidebar: {
 			categories: [],
 			footerActions: [
+				{
+					id: "account-settings",
+					title: "Account Settings",
+					iconName: "user",
+					color: "var(--text-secondary)",
+					onClick: () => {
+						openAccountSettings();
+					},
+				},
 				{
 					id: "logout",
 					title: "Sign Out",
@@ -71,6 +81,11 @@
 		},
 		layout: {
 			headerHeight: "60px",
+		},
+		auth: {
+			logtoEndpoint: runtimeConfig.LOGTO_ENDPOINT,
+			accountCenterEndpoint: runtimeConfig.LOGTO_ACCOUNT_CENTER_ENDPOINT,
+			apiUrl: runtimeConfig.API_URL,
 		},
 	});
 
@@ -104,24 +119,7 @@
 	onMount(() => {
 		auth.init();
 		initializeNavigation(pageDefinitions);
-
-		const updateRoute = () => {
-			const hash = window.location.hash.slice(1) as PageKey;
-			if (hash && hash in pages) {
-				// Navigate to the page via blueprint's navigation
-				const pageIndex = pageDefinitions.findIndex((p) => p.id === hash);
-				if (pageIndex >= 0) {
-					setNavigationPages(pageDefinitions);
-				}
-			}
-		};
-
-		updateRoute();
-		window.addEventListener("hashchange", updateRoute);
-
-		return () => {
-			window.removeEventListener("hashchange", updateRoute);
-		};
+		setNavigationPages(pageDefinitions);
 	});
 </script>
 
@@ -154,7 +152,7 @@
 		</div>
 	</section>
 {:else}
-	<MainLayout pages={pageDefinitions} {config} />
+	<MainLayout pages={pageDefinitions} config={appConfig} {auth} {authStores} t={t} />
 	<ToastContainer />
 {/if}
 

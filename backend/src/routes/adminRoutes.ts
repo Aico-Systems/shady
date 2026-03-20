@@ -2,7 +2,7 @@ import { getLogger } from '../logger';
 import { jsonResponse, errorResponse } from './router';
 import { requireUserContext } from '../utils/logtoAuth';
 import { db } from '../db';
-import { bookingUsers, availabilityRules, bookingConfigs, bookings } from '../db/schema';
+import { bookingUsers, availabilityRules, bookingConfigs } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { googleCalendarService } from '../services/GoogleCalendarService';
 import { bookingService } from '../services/BookingService';
@@ -54,17 +54,17 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
     // Google Calendar connection
     if (path.match(/^\/api\/admin\/users\/([^\/]+)\/google-connect$/) && method === 'POST') {
       const userId = path.match(/^\/api\/admin\/users\/([^\/]+)\/google-connect$/)![1];
-      return await handleGoogleConnect(userId);
+      return await handleGoogleConnect(userId, userContext.organizationId);
     }
 
     // Availability management
     const availMatch = path.match(/^\/api\/admin\/users\/([^\/]+)\/availability$/);
     if (availMatch && method === 'GET') {
-      return await handleGetAvailability(availMatch[1]);
+      return await handleGetAvailability(availMatch[1], userContext.organizationId);
     }
 
     if (availMatch && method === 'PUT') {
-      return await handleUpdateAvailability(request, availMatch[1]);
+      return await handleUpdateAvailability(request, availMatch[1], userContext.organizationId);
     }
 
     // Bookings management
@@ -74,7 +74,7 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
 
     const cancelMatch = path.match(/^\/api\/admin\/bookings\/([^\/]+)\/cancel$/);
     if (cancelMatch && method === 'PUT') {
-      return await handleCancelBooking(request, cancelMatch[1]);
+      return await handleCancelBooking(request, cancelMatch[1], userContext.organizationId);
     }
 
     // Booking stats
@@ -109,7 +109,10 @@ async function handleSyncCurrentUser(userContext: any): Promise<Response> {
 
   // Check if user already exists
   const existing = await db.query.bookingUsers.findFirst({
-    where: eq(bookingUsers.logtoUserId, logtoUserId)
+    where: and(
+      eq(bookingUsers.organizationId, orgId),
+      eq(bookingUsers.logtoUserId, logtoUserId)
+    )
   });
 
   if (existing) {
@@ -255,7 +258,11 @@ async function handleUpdateUser(request: Request, userId: string, orgId: string)
 }
 
 // POST /api/admin/users/:id/google-connect
-async function handleGoogleConnect(userId: string): Promise<Response> {
+async function handleGoogleConnect(userId: string, orgId: string): Promise<Response> {
+  const user = await requireBookingUserInOrganization(userId, orgId);
+  if (!user) {
+    return errorResponse('User not found', 404);
+  }
   const authUrl = googleCalendarService.generateAuthUrl(userId);
   return jsonResponse({ success: true, data: { authUrl } });
 }
@@ -285,7 +292,11 @@ async function handleGoogleCallback(url: URL): Promise<Response> {
 }
 
 // GET /api/admin/users/:id/availability
-async function handleGetAvailability(userId: string): Promise<Response> {
+async function handleGetAvailability(userId: string, orgId: string): Promise<Response> {
+  const user = await requireBookingUserInOrganization(userId, orgId);
+  if (!user) {
+    return errorResponse('User not found', 404);
+  }
   const rules = await db.query.availabilityRules.findMany({
     where: eq(availabilityRules.bookingUserId, userId)
   });
@@ -294,7 +305,11 @@ async function handleGetAvailability(userId: string): Promise<Response> {
 }
 
 // PUT /api/admin/users/:id/availability
-async function handleUpdateAvailability(request: Request, userId: string): Promise<Response> {
+async function handleUpdateAvailability(request: Request, userId: string, orgId: string): Promise<Response> {
+  const user = await requireBookingUserInOrganization(userId, orgId);
+  if (!user) {
+    return errorResponse('User not found', 404);
+  }
   const body: UpdateAvailabilityRequest = await request.json();
 
   // Delete existing rules
@@ -349,9 +364,14 @@ async function handleGetBookings(url: URL, orgId: string): Promise<Response> {
 }
 
 // PUT /api/admin/bookings/:id/cancel
-async function handleCancelBooking(request: Request, bookingId: string): Promise<Response> {
+async function handleCancelBooking(request: Request, bookingId: string, orgId: string): Promise<Response> {
   const body = await request.json();
   const reason = body.reason;
+
+  const existing = await bookingService.getBooking(bookingId);
+  if (!existing || existing.booking.organizationId !== orgId) {
+    return errorResponse('Booking not found', 404);
+  }
 
   const result = await bookingService.cancelBooking(bookingId, reason);
 
@@ -408,4 +428,13 @@ async function handleUpdateConfig(request: Request, orgId: string): Promise<Resp
   }
 
   return jsonResponse({ success: true, data: updated });
+}
+
+async function requireBookingUserInOrganization(userId: string, orgId: string) {
+  return await db.query.bookingUsers.findFirst({
+    where: and(
+      eq(bookingUsers.id, userId),
+      eq(bookingUsers.organizationId, orgId)
+    )
+  });
 }

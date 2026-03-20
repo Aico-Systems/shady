@@ -47,8 +47,8 @@ export interface BookingResult {
 export class BookingApi {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:5006') {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl?: string) {
+    this.baseUrl = baseUrl || 'http://localhost:5006';
   }
 
   /**

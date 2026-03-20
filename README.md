@@ -1,6 +1,6 @@
-# Booking Service - Standalone Calendar Integration
+# Shady - Standalone Calendar Booking Service
 
-A standalone microservice for calendar booking with Google Calendar synchronization, built for organizations using Logto authentication.
+A standalone booking microservice with Google Calendar synchronization, built to sit next to AICO while reusing the same Logto and blueprint conventions.
 
 ## 🎯 MVP Features
 
@@ -12,11 +12,12 @@ A standalone microservice for calendar booking with Google Calendar synchronizat
 - Email notifications (MailSend integration)
 - Logto authentication for admin portal
 - Multi-tenant organization support
+- Docker Compose stack with dedicated ports that do not overlap the current AICO dev ports
 
-🚧 **In Progress:**
-- Backend API routes (main.ts + router)
-- Admin Svelte UI
-- Embeddable widget
+🚧 **Active cleanup areas:**
+- Production hardening for secrets and OAuth credential handling
+- Schema migration workflow for existing local databases
+- Widget packaging polish beyond the standalone `widget.js` bundle
 
 ## 📁 Project Structure
 

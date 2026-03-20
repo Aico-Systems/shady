@@ -1,8 +1,16 @@
 import { config as dotenvConfig } from 'dotenv';
+import { existsSync } from 'fs';
 import { resolve } from 'path';
 
-// Load .env from parent directory (shady/.env)
-dotenvConfig({ path: resolve(__dirname, '../../..', '.env') });
+const envCandidates = [
+  resolve(__dirname, '../../..', '.env'),
+  resolve(__dirname, '../..', '.env')
+];
+
+const envPath = envCandidates.find((candidate) => existsSync(candidate));
+if (envPath) {
+  dotenvConfig({ path: envPath });
+}
 
 function getEnv(key: string, defaultValue?: string): string {
   const value = process.env[key];

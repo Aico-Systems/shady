@@ -1,5 +1,16 @@
+import { existsSync } from 'fs'
+import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+
+const blueprintCandidates = [
+  resolve(__dirname, 'blueprint/src'),
+  resolve(__dirname, '../../blueprint/src')
+]
+
+const blueprintPath =
+  blueprintCandidates.find((candidate) => existsSync(resolve(candidate, 'blueprint.css'))) ??
+  blueprintCandidates[0]
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -18,7 +29,7 @@ export default defineConfig(({ mode }) => ({
   envPrefix: 'VITE_',
   resolve: {
     alias: {
-      '@aico/blueprint': '/app/blueprint/src'
+      '@aico/blueprint': blueprintPath
     }
   },
   ssr: {

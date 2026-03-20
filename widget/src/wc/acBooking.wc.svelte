@@ -42,18 +42,15 @@
     theme = 'auto',
   }: Attributes = $props();
 
-  ensureI18n(widgetLocale);
-  locale.set(widgetLocale);
+  let currentLocale = $state('en');
+  const unsubLocale = locale.subscribe((value) => {
+    currentLocale = value || 'en';
+  });
 
-let currentLocale = $state(widgetLocale || 'en');
-const unsubLocale = locale.subscribe((value) => {
-  currentLocale = value || 'en';
-});
-
-let api = $state(new BookingApi(apiUrl));
-$effect(() => {
-  api = new BookingApi(apiUrl);
-});
+  let api = $state(new BookingApi());
+  $effect(() => {
+    api = new BookingApi(apiUrl);
+  });
 
   let currentStep = $state<Step>('calendar');
   let selectedDate = $state<Date | null>(null);
@@ -65,12 +62,12 @@ $effect(() => {
     email: '',
   });
   let notes = $state('');
-let bookingResult = $state<BookingResult | null>(null);
-let loading = $state(false);
-let error = $state<string | null>(null);
+  let bookingResult = $state<BookingResult | null>(null);
+  let loading = $state(false);
+  let error = $state<string | null>(null);
 
   let appliedTheme = $state<'light' | 'dark'>('light');
-  let themeSetting = $state<ThemeSetting>(theme || 'auto');
+  let themeSetting = $state<ThemeSetting>('auto');
   let mediaQuery: MediaQueryList | null = null;
 
   const slotsByTime = $derived(sortSlotsByTime(availableSlots));
@@ -78,7 +75,7 @@ let error = $state<string | null>(null);
   onMount(() => {
     ensureI18n(widgetLocale);
     locale.set(widgetLocale);
-    updateTheme(themeSetting);
+    updateTheme(theme || 'auto');
     setupMediaListener();
     loadConfig();
   });
@@ -121,16 +118,16 @@ let error = $state<string | null>(null);
     }
   });
 
-  let lastOrgValue = orgId;
-  let lastApiUrl = apiUrl;
+  let lastOrgValue = '';
+  let lastApiUrl = '';
   $effect(() => {
     if (!orgId) return;
     const nextOrg = orgId;
-    const nextApi = apiUrl;
+    const nextApi = apiUrl || '';
     if (nextOrg !== lastOrgValue || nextApi !== lastApiUrl) {
       lastOrgValue = nextOrg;
       lastApiUrl = nextApi;
-      api = new BookingApi(apiUrl);
+      api = new BookingApi(nextApi);
       loadConfig();
     }
   });

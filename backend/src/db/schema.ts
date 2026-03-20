@@ -39,7 +39,7 @@ export const bookingUsers = pgTable(
   },
   (table) => ({
     orgIdx: index('idx_booking_users_org').on(table.organizationId),
-    logtoUserIdx: uniqueIndex('ux_booking_users_logto_user').on(table.logtoUserId),
+    logtoUserIdx: uniqueIndex('ux_booking_users_org_logto_user').on(table.organizationId, table.logtoUserId),
     emailIdx: index('idx_booking_users_email').on(table.email)
   })
 );

@@ -173,17 +173,11 @@ async function handleCreateBooking(request: Request): Promise<Response> {
       notes: body.notes
     });
 
-    // Fix organizationId (fetch from user)
-    const updatedResult = await bookingService.updateBooking(result.booking.id, {
-      visitorData: body.visitorData,
-      notes: body.notes
-    });
-
     // Send email notifications
     try {
       await Promise.all([
-        mailSendService.sendVisitorConfirmation(updatedResult),
-        mailSendService.sendUserNotification(updatedResult)
+        mailSendService.sendVisitorConfirmation(result),
+        mailSendService.sendUserNotification(result)
       ]);
     } catch (emailError) {
       logger.warn('Failed to send emails', { emailError });
@@ -193,11 +187,11 @@ async function handleCreateBooking(request: Request): Promise<Response> {
     return jsonResponse({
       success: true,
       data: {
-        bookingId: updatedResult.booking.id,
-        startTime: updatedResult.booking.startTime.toISOString(),
-        endTime: updatedResult.booking.endTime.toISOString(),
-        googleMeetLink: updatedResult.booking.googleMeetLink,
-        status: updatedResult.booking.status
+        bookingId: result.booking.id,
+        startTime: result.booking.startTime.toISOString(),
+        endTime: result.booking.endTime.toISOString(),
+        googleMeetLink: result.booking.googleMeetLink,
+        status: result.booking.status
       }
     }, 201);
   } catch (error: any) {

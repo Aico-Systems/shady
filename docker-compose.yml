@@ -1,7 +1,9 @@
+name: shady
+
 services:
   postgres:
     image: pgvector/pgvector:pg17
-    container_name: booking_postgres
+    container_name: shady_postgres
     ports:
       - "5436:5432"
     environment:
@@ -17,13 +19,13 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking_network
+      - shady_network
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: booking_backend
+    container_name: shady_backend
     ports:
       - "5006:5006"
     env_file:
@@ -40,14 +42,14 @@ services:
       - ./backend/src:/app/src:ro
       - ./google.json:/app/google.json:ro
     networks:
-      - booking_network
+      - shady_network
     restart: unless-stopped
 
   admin:
     build:
       context: ./admin
       dockerfile: Dockerfile
-    container_name: booking_admin
+    container_name: shady_admin
     ports:
       - "5175:5175"
     environment:
@@ -58,14 +60,14 @@ services:
       - ../blueprint/src:/app/blueprint/src:ro
       - ./.env:/app/.env.development:ro
     networks:
-      - booking_network
+      - shady_network
     restart: unless-stopped
 
   widget-dev:
     build:
       context: ./widget
       dockerfile: Dockerfile
-    container_name: booking_widget
+    container_name: shady_widget
     ports:
       - "5174:5174"
     environment:
@@ -75,12 +77,12 @@ services:
       - /app/node_modules
       - ./.env:/app/.env.development:ro
     networks:
-      - booking_network
+      - shady_network
     restart: unless-stopped
 
   drizzle-studio:
     image: node:20-alpine
-    container_name: booking_drizzle_studio
+    container_name: shady_drizzle_studio
     working_dir: /workspace
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
     environment:
@@ -97,7 +99,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - booking_network
+      - shady_network
     restart: "no"
 
 volumes:
@@ -105,5 +107,5 @@ volumes:
   drizzle_studio_workspace:
 
 networks:
-  booking_network:
+  shady_network:
     driver: bridge

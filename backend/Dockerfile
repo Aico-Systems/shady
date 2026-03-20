@@ -2,7 +2,7 @@ FROM oven/bun:latest
 
 WORKDIR /app
 
-COPY package.json tsconfig.json ./
+COPY package.json bun.lock tsconfig.json ./
 
 # Install dependencies with Bun
 RUN bun install --frozen-lockfile

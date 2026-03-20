@@ -46,12 +46,7 @@
 
   async function syncCurrentUser() {
     try {
-      const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5006';
-      const response = await fetch(`${BASE_URL}/api/admin/users/sync`, { method: 'POST' });
-
-      if (!response.ok) {
-        throw new Error(`Sync failed: ${response.status}`);
-      }
+      await usersApi.syncCurrentUser();
     } catch (error) {
       console.error('Failed to sync current user:', error);
       toastService.error(get(t)('pages.users.notifications.syncError'));
@@ -171,7 +166,7 @@
           <p>{$t('pages.users.subtitle')}</p>
         </div>
         {#if $canManageUsers}
-          <button class="btn-primary" type="button" on:click={openCreateUserModal}>
+          <button class="btn-primary" type="button" onclick={openCreateUserModal}>
             <Plus size={16} />
             <span>{$t('pages.users.buttons.create')}</span>
           </button>
@@ -226,7 +221,7 @@
                       <input
                         type="checkbox"
                         checked={user.isActive}
-                        on:change={() => toggleActive(user)}
+                        onchange={() => toggleActive(user)}
                         disabled={!$canManageUsers}
                       />
                       <span></span>
@@ -234,13 +229,13 @@
                   </td>
                   <td>
                     <div class="surface-actions">
-                      <button type="button" class="ghost" on:click={() => openAvailabilityEditor(user)}>
+                      <button type="button" class="ghost" onclick={() => openAvailabilityEditor(user)}>
                         <CalendarRange size={16} />
                         <span>{$t('pages.users.buttons.availability')}</span>
                       </button>
 
                       {#if !user.hasGoogleCalendar && $canConnectCalendar}
-                        <button type="button" class="ghost" on:click={() => connectGoogle(user)}>
+                        <button type="button" class="ghost" onclick={() => connectGoogle(user)}>
                           <Link2 size={16} />
                           <span>{$t('pages.users.google.connect')}</span>
                         </button>
@@ -258,14 +253,22 @@
 </div>
 
 {#if showAvailabilityModal && selectedUser}
-  <div class="modal-overlay" role="presentation" on:click={() => (showAvailabilityModal = false)}>
-    <div class="modal" role="dialog" aria-modal="true" on:click|stopPropagation>
+  <div
+    class="modal-overlay"
+    role="presentation"
+    onclick={(event) => {
+      if (event.target === event.currentTarget) {
+        showAvailabilityModal = false;
+      }
+    }}
+  >
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
       <header class="modal-header">
         <div>
           <p class="eyebrow">{$t('pages.users.buttons.availability')}</p>
           <h3>{$t('pages.users.modals.availability.title', { values: { name: selectedUser.displayName } })}</h3>
         </div>
-        <button class="ghost" on:click={() => (showAvailabilityModal = false)}>
+        <button class="ghost" onclick={() => (showAvailabilityModal = false)}>
           {$t('actions.close')}
         </button>
       </header>
@@ -281,22 +284,22 @@
             <input type="time" bind:value={rule.startTime} />
             <span>{$t('pages.users.modals.availability.rangeSeparator')}</span>
             <input type="time" bind:value={rule.endTime} />
-            <button class="icon-only" type="button" on:click={() => removeAvailabilityRule(index)}>
+            <button class="icon-only" type="button" onclick={() => removeAvailabilityRule(index)}>
               ✕
             </button>
           </div>
         {/each}
 
-        <button class="btn-secondary" type="button" on:click={addAvailabilityRule}>
+        <button class="btn-secondary" type="button" onclick={addAvailabilityRule}>
           {$t('pages.users.modals.availability.addSlot')}
         </button>
       </div>
 
       <footer class="modal-footer">
-        <button class="ghost" type="button" on:click={() => (showAvailabilityModal = false)}>
+        <button class="ghost" type="button" onclick={() => (showAvailabilityModal = false)}>
           {$t('pages.users.modals.availability.cancel')}
         </button>
-        <button class="btn-primary" type="button" on:click={saveAvailability} disabled={savingAvailability}>
+        <button class="btn-primary" type="button" onclick={saveAvailability} disabled={savingAvailability}>
           {savingAvailability
             ? $t('pages.users.modals.availability.saving')
             : $t('pages.users.modals.availability.save')}
@@ -307,20 +310,31 @@
 {/if}
 
 {#if showCreateUserModal}
-  <div class="modal-overlay" role="presentation" on:click={() => (showCreateUserModal = false)}>
-    <div class="modal" role="dialog" aria-modal="true" on:click|stopPropagation>
+  <div
+    class="modal-overlay"
+    role="presentation"
+    onclick={(event) => {
+      if (event.target === event.currentTarget) {
+        showCreateUserModal = false;
+      }
+    }}
+  >
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
       <header class="modal-header">
         <div>
           <p class="eyebrow">{$t('navigation.users')}</p>
           <h3>{$t('pages.users.modals.create.title')}</h3>
         </div>
-        <button class="ghost" on:click={() => (showCreateUserModal = false)}>
+        <button class="ghost" onclick={() => (showCreateUserModal = false)}>
           {$t('actions.close')}
         </button>
       </header>
 
       <div class="modal-body">
-        <form class="form-stack" on:submit|preventDefault={createUser}>
+        <form class="form-stack" onsubmit={(event) => {
+          event.preventDefault();
+          createUser();
+        }}>
           <div class="form-group">
             <label for="email">{$t('pages.users.modals.create.emailLabel')}</label>
             <input
@@ -360,10 +374,10 @@
       </div>
 
       <footer class="modal-footer">
-        <button class="ghost" type="button" on:click={() => (showCreateUserModal = false)} disabled={creatingUser}>
+        <button class="ghost" type="button" onclick={() => (showCreateUserModal = false)} disabled={creatingUser}>
           {$t('pages.users.modals.create.cancel')}
         </button>
-        <button class="btn-primary" type="button" on:click={createUser} disabled={creatingUser}>
+        <button class="btn-primary" type="button" onclick={createUser} disabled={creatingUser}>
           {creatingUser ? $t('pages.users.modals.create.creating') : $t('pages.users.modals.create.create')}
         </button>
       </footer>

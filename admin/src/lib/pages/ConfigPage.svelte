@@ -4,6 +4,7 @@
   import { configApi, type BookingConfig } from '../api';
   import { canManageConfig } from '../permissions';
   import { t } from '../../i18n';
+  import runtimeConfig from '../config';
   import { Copy, Settings2 } from '@lucide/svelte';
   import { toastService } from '@aico/blueprint';
 
@@ -95,9 +96,9 @@
 
   async function copyEmbedCode() {
     if (!config) return;
-    const code = `<script src="http://localhost:5174/widget.js"><\/script>
+    const code = `<script src="${runtimeConfig.WIDGET_URL}/widget.js"><\/script>
 
-<ac-booking org-id="${config.bookingSlug || config.organizationId}" api-url="http://localhost:5006"></ac-booking>`;
+<ac-booking org-id="${config.bookingSlug || config.organizationId}" api-url="${runtimeConfig.API_URL}"></ac-booking>`;
     await navigator.clipboard.writeText(code);
     toastService.success(get(t)('pages.config.notifications.codeCopied'));
   }
@@ -148,11 +149,11 @@
                 {$t('actions.copyCode')}
               </button>
             </div>
-            <pre><code>&lt;script src="http://localhost:5174/widget.js"&gt;&lt;/script&gt;
+            <pre><code>&lt;script src="{runtimeConfig.WIDGET_URL}/widget.js"&gt;&lt;/script&gt;
 
 &lt;ac-booking 
   org-id="{config.bookingSlug || config.organizationId}" 
-  api-url="http://localhost:5006"
+  api-url="{runtimeConfig.API_URL}"
 &gt;&lt;/ac-booking&gt;</code></pre>
           </div>
         </section>
@@ -190,8 +191,9 @@
                   <div class="field-controls">
                     <div class="form-row">
                       <div class="form-group">
-                        <label>{$t('pages.config.fields.fieldName')}</label>
+                        <label for={`field-name-${index}`}>{$t('pages.config.fields.fieldName')}</label>
                         <input
+                          id={`field-name-${index}`}
                           type="text"
                           bind:value={field.name}
                           placeholder="field_name"
@@ -199,8 +201,9 @@
                         />
                       </div>
                       <div class="form-group">
-                        <label>{$t('pages.config.fields.fieldLabel')}</label>
+                        <label for={`field-label-${index}`}>{$t('pages.config.fields.fieldLabel')}</label>
                         <input
+                          id={`field-label-${index}`}
                           type="text"
                           bind:value={field.label}
                           placeholder="Full name"
@@ -208,8 +211,8 @@
                         />
                       </div>
                       <div class="form-group">
-                        <label>{$t('pages.config.fields.fieldType')}</label>
-                        <select bind:value={field.type} disabled={!$canManageConfig}>
+                        <label for={`field-type-${index}`}>{$t('pages.config.fields.fieldType')}</label>
+                        <select id={`field-type-${index}`} bind:value={field.type} disabled={!$canManageConfig}>
                           {#each fieldTypes as type}
                             <option value={type}>{$t(`pages.config.fields.types.${type}`)}</option>
                           {/each}
@@ -249,8 +252,8 @@
 
           <div class="settings-grid">
             <div class="form-group">
-              <label>{$t('pages.config.booking.duration')}</label>
-              <select bind:value={config.bookingDurationMinutes} disabled={!$canManageConfig}>
+              <label for="booking-duration">{$t('pages.config.booking.duration')}</label>
+              <select id="booking-duration" bind:value={config.bookingDurationMinutes} disabled={!$canManageConfig}>
                 {#each durationOptions as duration}
                   <option value={duration}>{duration} min</option>
                 {/each}
@@ -259,8 +262,9 @@
             </div>
 
             <div class="form-group">
-              <label>{$t('pages.config.booking.advanceWindow')}</label>
+              <label for="booking-advance-window">{$t('pages.config.booking.advanceWindow')}</label>
               <input
+                id="booking-advance-window"
                 type="number"
                 bind:value={config.advanceBookingDays}
                 min="1"
@@ -271,8 +275,9 @@
             </div>
 
             <div class="form-group">
-              <label>{$t('pages.config.booking.buffer')}</label>
+              <label for="booking-buffer">{$t('pages.config.booking.buffer')}</label>
               <input
+                id="booking-buffer"
                 type="number"
                 bind:value={config.bufferMinutes}
                 min="0"
