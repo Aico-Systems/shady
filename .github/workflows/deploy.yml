@@ -110,13 +110,13 @@ jobs:
         if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
         run: |
           git clone --depth 1 --filter=blob:none --sparse \
-            https://x-access-token:${{ secrets.SUBMODULES_PAT }}@github.com/Aico-Systems/Umbrella.git /tmp/aico
-          cd /tmp/aico
-          git sparse-checkout set backend/entity-schema backend/model-catalog
-          cp -r backend/entity-schema $GITHUB_WORKSPACE/backend/entity-schema
-          cp -r backend/model-catalog $GITHUB_WORKSPACE/backend/model-catalog
-          mkdir -p $GITHUB_WORKSPACE/backend/src
-          rm -rf /tmp/aico
+            https://x-access-token:${{ secrets.SUBMODULES_PAT }}@github.com/Aico-Systems/backend.git /tmp/aico-backend
+          cd /tmp/aico-backend
+          git sparse-checkout set entity-schema model-catalog
+          mkdir -p $GITHUB_WORKSPACE/backend
+          cp -r entity-schema $GITHUB_WORKSPACE/backend/entity-schema
+          cp -r model-catalog $GITHUB_WORKSPACE/backend/model-catalog
+          rm -rf /tmp/aico-backend
 
       - name: Set up Docker Buildx
         if: steps.changed.outputs.changed == 'true'
