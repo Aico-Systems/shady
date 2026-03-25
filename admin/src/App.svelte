@@ -19,6 +19,7 @@
 	import UsersPage from "./lib/pages/UsersPage.svelte";
 	import BookingsPage from "./lib/pages/BookingsPage.svelte";
 	import ConfigPage from "./lib/pages/ConfigPage.svelte";
+	import ContentPage from "./lib/pages/ContentPage.svelte";
 	import { t } from "./i18n";
 
 	initLogtoAuth({
@@ -89,6 +90,13 @@
 
 	// Create PageDefinition array for blueprint
 	const pageDefinitions: PageDefinition[] = [
+		{
+			id: "content",
+			title: "Content",
+			iconName: "file-pen-line",
+			component: ContentPage,
+			color: "var(--aico-emerald-500)",
+		},
 		{
 			id: "users",
 			title: "Users",

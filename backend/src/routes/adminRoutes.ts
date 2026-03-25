@@ -11,6 +11,7 @@ import type { UpdateAvailabilityRequest, UpdateBookingConfigRequest } from '../t
 import { BOOKING_SCOPES, hasAnyScope } from '../utils/bookingScopes';
 import { logtoManagementService } from '../services/logtoManagementService';
 import { organizationSyncService } from '../services/organizationSyncService';
+import { handleCmsAdminRoutes } from './cmsAdminRoutes';
 
 const logger = getLogger('adminRoutes');
 
@@ -24,6 +25,14 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
   }
 
   const userContext = requireUserContext(request);
+
+  if (path.startsWith('/api/admin/cms')) {
+    if (!userContext.isSuperAdmin) {
+      return errorResponse('Super admin access required', 403);
+    }
+
+    return handleCmsAdminRoutes(request, url, userContext.id);
+  }
 
   if (!userContext.organizationId) {
     return errorResponse('Organization context required', 403);

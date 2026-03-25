@@ -7,6 +7,7 @@ import { db } from '../db';
 import { bookingConfigs, bookingUsers } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import type { CreateBookingRequest, AvailabilityRequest } from '../types';
+import { handleCmsPublicRoutes } from './cmsPublicRoutes';
 
 const logger = getLogger('publicRoutes');
 
@@ -15,6 +16,10 @@ export async function handlePublicRoutes(request: Request, url: URL): Promise<Re
   const method = request.method;
 
   try {
+    if (path.startsWith('/api/public/cms/')) {
+      return await handleCmsPublicRoutes(request, url);
+    }
+
     // GET /api/public/availability
     if (path === '/api/public/availability' && method === 'GET') {
       return await handleGetAvailability(url);

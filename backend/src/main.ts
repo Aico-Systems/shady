@@ -3,6 +3,7 @@ import { getLogger } from './logger';
 import { handleRoute } from './routes/router';
 import { databaseService } from './db';
 import { organizationSyncService } from './services/organizationSyncService';
+import { cmsSeedService } from './seeds/CmsSeedService';
 
 declare const Bun: any;
 
@@ -31,7 +32,11 @@ async function startServer() {
     }
 
     // Step 3: Start HTTP server
-    logger.info('Step 3/3: Starting HTTP server...');
+    logger.info('Step 3/4: Seeding CMS content...');
+    await cmsSeedService.seed();
+    logger.info('✓ CMS seed complete');
+
+    logger.info('Step 4/4: Starting HTTP server...');
     Bun.serve({
       port: config.PORT,
       async fetch(request: Request) {

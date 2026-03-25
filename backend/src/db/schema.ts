@@ -171,6 +171,65 @@ export const bookingConfigs = pgTable(
 );
 
 // ============================================================================
+// CMS SITE CONTENT
+// ============================================================================
+
+export const cmsSiteContent = pgTable(
+  'cms_site_content',
+  {
+    key: text('key').primaryKey(),
+    draftContent: jsonb('draft_content').default({}),
+    publishedContent: jsonb('published_content').default({}),
+    updatedBy: text('updated_by'),
+    publishedBy: text('published_by'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    publishedAt: timestamp('published_at')
+  }
+);
+
+// ============================================================================
+// CMS BLOG POSTS
+// ============================================================================
+
+export const cmsBlogPosts = pgTable(
+  'cms_blog_posts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    slug: text('slug').notNull(),
+    locale: text('locale').notNull().default('en'),
+    title: text('title').notNull(),
+    excerpt: text('excerpt').notNull().default(''),
+    body: text('body').notNull().default(''),
+    category: text('category').notNull().default('Journal'),
+    tags: jsonb('tags').default([]),
+    coverImageUrl: text('cover_image_url'),
+    authorName: text('author_name').notNull().default('AICO'),
+    authorRole: text('author_role').notNull().default('Editorial'),
+    seoTitle: text('seo_title'),
+    seoDescription: text('seo_description'),
+    readingTimeMinutes: integer('reading_time_minutes'),
+    status: text('status').notNull().default('draft'),
+    createdBy: text('created_by'),
+    updatedBy: text('updated_by'),
+    publishedBy: text('published_by'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    publishedAt: timestamp('published_at')
+  },
+  (table) => ({
+    slugLocaleIdx: uniqueIndex('ux_cms_blog_posts_slug_locale').on(
+      table.slug,
+      table.locale
+    ),
+    statusPublishedIdx: index('idx_cms_blog_posts_status_published').on(
+      table.status,
+      table.publishedAt
+    )
+  })
+);
+
+// ============================================================================
 // RELATIONS (for Drizzle ORM query builder)
 // ============================================================================
 

@@ -109,6 +109,55 @@ export interface BookingStats {
   upcomingCount: number;
 }
 
+export interface CmsSiteContentRecord {
+  key: string;
+  draftContent: Record<string, Record<string, unknown>>;
+  publishedContent: Record<string, Record<string, unknown>>;
+  updatedAt: string | null;
+  publishedAt: string | null;
+  updatedBy: string | null;
+  publishedBy: string | null;
+}
+
+export interface CmsBlogPost {
+  id: string;
+  slug: string;
+  locale: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  category: string;
+  tags: string[];
+  coverImageUrl: string | null;
+  authorName: string;
+  authorRole: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  readingTimeMinutes: number;
+  status: "draft" | "published";
+  createdAt: string | null;
+  updatedAt: string | null;
+  publishedAt: string | null;
+}
+
+export interface CmsBlogPostInput {
+  slug: string;
+  locale: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  category: string;
+  tags: string[];
+  coverImageUrl?: string | null;
+  authorName: string;
+  authorRole: string;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  readingTimeMinutes?: number | null;
+  status: "draft" | "published";
+  publishedAt?: string | null;
+}
+
 // Users API
 export const usersApi = {
   list: () => apiCall<OrgMember[]>('/api/admin/users'),
@@ -184,5 +233,40 @@ export const configApi = {
     apiCall<BookingConfig>('/api/admin/config', {
       method: 'PUT',
       body: JSON.stringify(data)
+    })
+};
+
+export const cmsApi = {
+  getSiteContent: () => apiCall<CmsSiteContentRecord>('/api/admin/cms/site-content'),
+
+  saveSiteContentDraft: (content: Record<string, Record<string, unknown>>) =>
+    apiCall<CmsSiteContentRecord>('/api/admin/cms/site-content', {
+      method: 'PUT',
+      body: JSON.stringify({ action: 'saveDraft', content })
+    }),
+
+  publishSiteContent: (content: Record<string, Record<string, unknown>>) =>
+    apiCall<CmsSiteContentRecord>('/api/admin/cms/site-content', {
+      method: 'PUT',
+      body: JSON.stringify({ action: 'publish', content })
+    }),
+
+  listPosts: () => apiCall<CmsBlogPost[]>('/api/admin/cms/posts'),
+
+  createPost: (data: CmsBlogPostInput) =>
+    apiCall<CmsBlogPost>('/api/admin/cms/posts', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  updatePost: (id: string, data: CmsBlogPostInput) =>
+    apiCall<CmsBlogPost>(`/api/admin/cms/posts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+
+  deletePost: (id: string) =>
+    apiCall<CmsBlogPost>(`/api/admin/cms/posts/${id}`, {
+      method: 'DELETE'
     })
 };
