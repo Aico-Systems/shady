@@ -3,13 +3,17 @@ import { existsSync } from 'fs';
 import { resolve } from 'path';
 
 const envCandidates = [
+  resolve(__dirname, '..', '.env.development'),
   resolve(__dirname, '../../..', '.env'),
-  resolve(__dirname, '../..', '.env')
+  resolve(__dirname, '../..', '.env'),
+  resolve(__dirname, '../../../..', '.env.dev'),
+  resolve(__dirname, '../../../..', '.env.dev.generated')
 ];
 
-const envPath = envCandidates.find((candidate) => existsSync(candidate));
-if (envPath) {
-  dotenvConfig({ path: envPath });
+for (const envPath of envCandidates) {
+  if (existsSync(envPath)) {
+    dotenvConfig({ path: envPath, override: false });
+  }
 }
 
 function getEnv(key: string, defaultValue?: string): string {
