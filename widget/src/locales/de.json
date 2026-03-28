@@ -38,8 +38,9 @@
       "with": "Mit",
       "time": "Zeit",
       "meetingLink": "Meeting-Link",
-      "addGoogle": "Zu Google Calendar hinzufügen",
-      "downloadIcs": ".ics-Datei laden"
+      "addGoogle": "Zu Google Kalender",
+      "addOutlook": "Zu Outlook",
+      "downloadIcs": "Apple / Outlook (.ics)"
     },
     "form": {
       "title": "Deine Informationen",

@@ -1,38 +1,18 @@
 import { google, calendar_v3 } from 'googleapis';
-import { config } from '../config';
 import { getLogger } from '../logger';
 import { db } from '../db';
 import { bookingUsers, calendarSyncState } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { googleConnectionService } from './GoogleConnectionService';
 
 const logger = getLogger('GoogleCalendarService');
 
 export class GoogleCalendarService {
-  private oauth2Client: InstanceType<typeof google.auth.OAuth2>;
-
-  constructor() {
-    this.oauth2Client = new google.auth.OAuth2(
-      config.GOOGLE_CLIENT_ID,
-      config.GOOGLE_CLIENT_SECRET,
-      config.GOOGLE_REDIRECT_URI
-    );
-  }
-
   /**
    * Generate OAuth URL for user to authorize Google Calendar access
    */
-  generateAuthUrl(state?: string): string {
-    const scopes = config.GOOGLE_SCOPES.split(',').map(s => s.trim());
-
-    const authUrl = this.oauth2Client.generateAuthUrl({
-      access_type: 'offline', // Request refresh token
-      scope: scopes,
-      state: state, // Pass through user/org context
-      prompt: 'consent' // Force consent screen to get refresh token
-    });
-
-    logger.info('Generated OAuth URL', { scopes });
-    return authUrl;
+  generateAuthUrl(bookingUserId: string): string {
+    return googleConnectionService.generateAuthUrl(bookingUserId);
   }
 
   /**
@@ -40,39 +20,7 @@ export class GoogleCalendarService {
    */
   async handleOAuthCallback(code: string, bookingUserId: string): Promise<void> {
     try {
-      // Exchange code for tokens
-      const { tokens } = await this.oauth2Client.getToken(code);
-
-      if (!tokens.refresh_token) {
-        throw new Error('No refresh token received. User may have already authorized.');
-      }
-
-      // Get user's calendar ID (primary calendar email)
-      this.oauth2Client.setCredentials(tokens);
-      const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
-
-      const calendarListResponse = await calendar.calendarList.list();
-      const primaryCalendar = calendarListResponse.data.items?.find(cal => cal.primary);
-
-      if (!primaryCalendar || !primaryCalendar.id) {
-        throw new Error('Could not find primary calendar');
-      }
-
-      // Store tokens in database
-      await db.update(bookingUsers)
-        .set({
-          googleRefreshToken: tokens.refresh_token,
-          googleAccessToken: tokens.access_token || null,
-          googleTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-          googleCalendarId: primaryCalendar.id,
-          updatedAt: new Date()
-        })
-        .where(eq(bookingUsers.id, bookingUserId));
-
-      logger.info('Google Calendar connected successfully', {
-        bookingUserId,
-        calendarId: primaryCalendar.id
-      });
+      await googleConnectionService.handleOAuthCallback(code, bookingUserId);
     } catch (error) {
       logger.error('Failed to handle OAuth callback', { error, bookingUserId });
       throw error;
@@ -83,38 +31,8 @@ export class GoogleCalendarService {
    * Get authenticated Calendar API client for a user
    */
   private async getCalendarClient(bookingUserId: string): Promise<calendar_v3.Calendar> {
-    // Load user's tokens from database
-    const user = await db.query.bookingUsers.findFirst({
-      where: eq(bookingUsers.id, bookingUserId)
-    });
-
-    if (!user || !user.googleRefreshToken) {
-      throw new Error('User has not connected Google Calendar');
-    }
-
-    // Set credentials
-    this.oauth2Client.setCredentials({
-      refresh_token: user.googleRefreshToken,
-      access_token: user.googleAccessToken || undefined,
-      expiry_date: user.googleTokenExpiry ? user.googleTokenExpiry.getTime() : undefined
-    });
-
-    // Auto-refresh if needed
-    const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
-
-    // Update tokens if they were refreshed
-    const tokens = this.oauth2Client.credentials;
-    if (tokens.access_token !== user.googleAccessToken) {
-      await db.update(bookingUsers)
-        .set({
-          googleAccessToken: tokens.access_token || null,
-          googleTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-          updatedAt: new Date()
-        })
-        .where(eq(bookingUsers.id, bookingUserId));
-    }
-
-    return calendar;
+    const { auth } = await googleConnectionService.getAuthorizedClient(bookingUserId);
+    return google.calendar({ version: 'v3', auth });
   }
 
   /**
@@ -216,7 +134,7 @@ export class GoogleCalendarService {
         calendarId: user.googleCalendarId,
         conferenceDataVersion: 1, // Enable conference creation
         requestBody: event,
-        sendUpdates: 'all' // Send email to all attendees
+        sendUpdates: 'none' // Booking emails are handled by GoogleMailService
       });
 
       logger.info('Calendar event created', {
@@ -279,7 +197,7 @@ export class GoogleCalendarService {
         calendarId: user.googleCalendarId,
         eventId,
         requestBody: event,
-        sendUpdates: 'all'
+        sendUpdates: 'none'
       });
 
       logger.info('Calendar event updated', { bookingUserId, eventId });
@@ -307,7 +225,7 @@ export class GoogleCalendarService {
       await calendar.events.delete({
         calendarId: user.googleCalendarId,
         eventId,
-        sendUpdates: 'all' // Notify attendees
+        sendUpdates: 'none'
       });
 
       logger.info('Calendar event deleted', { bookingUserId, eventId });
@@ -415,104 +333,6 @@ export class GoogleCalendarService {
       .where(eq(calendarSyncState.bookingUserId, bookingUserId));
 
     logger.info('Google Calendar disconnected', { bookingUserId });
-  }
-
-  /**
-   * Batch query freebusy information for multiple calendars
-   * This is MUCH more efficient than fetching events individually
-   * 
-   * Google Calendar API allows querying up to 50 calendars per request
-   * This method handles batching and returns busy periods for each user
-   * 
-   * @param userCalendarMap - Map of booking user IDs to their calendar IDs
-   * @param startTime - Start of the time range
-   * @param endTime - End of the time range
-   * @returns Map of booking user IDs to their busy time periods
-   */
-  async batchQueryFreeBusy(
-    userCalendarMap: Map<string, { calendarId: string; refreshToken: string }>,
-    startTime: Date,
-    endTime: Date
-  ): Promise<Map<string, Array<{ start: Date; end: Date }>>> {
-    const result = new Map<string, Array<{ start: Date; end: Date }>>();
-
-    if (userCalendarMap.size === 0) {
-      return result;
-    }
-
-    // Google Calendar API supports up to 50 calendars per freebusy request
-    const BATCH_SIZE = 50;
-    const entries = Array.from(userCalendarMap.entries());
-    const batches: typeof entries[] = [];
-
-    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-      batches.push(entries.slice(i, i + BATCH_SIZE));
-    }
-
-    // Process each batch
-    for (const batch of batches) {
-      try {
-        // Use the first user's credentials (they all have the same access scope)
-        // This is safe because we're only querying, not modifying
-        const firstUserId = batch[0][0];
-        const calendar = await this.getCalendarClient(firstUserId);
-
-        const items = batch.map(([_, data]) => ({ id: data.calendarId }));
-
-        const response = await calendar.freebusy.query({
-          requestBody: {
-            timeMin: startTime.toISOString(),
-            timeMax: endTime.toISOString(),
-            items
-          }
-        });
-
-        // Parse results
-        const calendars = response.data.calendars || {};
-        
-        for (const [bookingUserId, data] of batch) {
-          const calendarData = calendars[data.calendarId];
-          
-          if (!calendarData) {
-            result.set(bookingUserId, []);
-            continue;
-          }
-
-          // Extract busy periods
-          const busyPeriods = (calendarData.busy || [])
-            .filter(period => period.start && period.end)
-            .map(period => ({
-              start: new Date(period.start!),
-              end: new Date(period.end!)
-            }));
-
-          result.set(bookingUserId, busyPeriods);
-        }
-
-        logger.debug('Batch freebusy query successful', {
-          batchSize: batch.length,
-          calendarsQueried: items.length
-        });
-      } catch (error) {
-        logger.error('Batch freebusy query failed', { 
-          error,
-          batchSize: batch.length 
-        });
-
-        // Fallback: set empty busy times for this batch
-        for (const [bookingUserId] of batch) {
-          result.set(bookingUserId, []);
-        }
-      }
-    }
-
-    logger.info('Batch freebusy query completed', {
-      totalUsers: userCalendarMap.size,
-      batches: batches.length,
-      successCount: result.size
-    });
-
-    return result;
   }
 }
 

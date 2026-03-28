@@ -5,6 +5,7 @@ import { db } from '../db';
 import { bookingUsers, availabilityRules, bookingConfigs } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { googleCalendarService } from '../services/GoogleCalendarService';
+import { googleConnectionService } from '../services/GoogleConnectionService';
 import { bookingService } from '../services/BookingService';
 import { config } from '../config';
 import type { UpdateAvailabilityRequest, UpdateBookingConfigRequest } from '../types';
@@ -269,14 +270,15 @@ async function handleGoogleConnect(userId: string, orgId: string): Promise<Respo
 // GET /api/admin/google/callback
 async function handleGoogleCallback(url: URL): Promise<Response> {
   const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state'); // userId
+  const state = url.searchParams.get('state');
 
   if (!code || !state) {
     return errorResponse('Missing code or state', 400);
   }
 
   try {
-    await googleCalendarService.handleOAuthCallback(code, state);
+    const { bookingUserId } = googleConnectionService.parseAuthState(state);
+    await googleCalendarService.handleOAuthCallback(code, bookingUserId);
     return new Response(null, {
       status: 302,
       headers: {

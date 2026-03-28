@@ -4,10 +4,9 @@ import { resolve } from 'path';
 
 const envCandidates = [
   resolve(__dirname, '..', '.env.development'),
-  resolve(__dirname, '../../..', '.env'),
-  resolve(__dirname, '../..', '.env'),
-  resolve(__dirname, '../../../..', '.env.dev'),
-  resolve(__dirname, '../../../..', '.env.dev.generated')
+  resolve(__dirname, '../../..', '.env.dev'),
+  resolve(__dirname, '../../..', '.env.dev.generated'),
+  resolve(__dirname, '../../..', '.env')
 ];
 
 for (const envPath of envCandidates) {
@@ -36,12 +35,10 @@ export const config = {
   GOOGLE_CLIENT_ID: getEnv('GOOGLE_CLIENT_ID'),
   GOOGLE_CLIENT_SECRET: getEnv('GOOGLE_CLIENT_SECRET'),
   GOOGLE_REDIRECT_URI: getEnv('GOOGLE_REDIRECT_URI'),
-  GOOGLE_SCOPES: getEnvOptional('GOOGLE_SCOPES', 'https://www.googleapis.com/auth/calendar'),
-
-  // MailSend
-  MAILSEND_API_TOKEN: getEnvOptional('MAILSEND_API_TOKEN', ''),
-  MAILSEND_FROM_EMAIL: getEnvOptional('MAILSEND_FROM_EMAIL', 'booking@example.com'),
-  MAILSEND_FROM_NAME: getEnvOptional('MAILSEND_FROM_NAME', 'Booking Service'),
+  GOOGLE_SCOPES: getEnvOptional(
+    'GOOGLE_SCOPES',
+    'https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/calendar.calendarlist.readonly,https://www.googleapis.com/auth/gmail.send'
+  ),
 
   // Logto
   LOGTO_ENDPOINT: getEnv('LOGTO_ENDPOINT'),

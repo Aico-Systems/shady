@@ -1,4 +1,7 @@
 .env
+.env.dev
+.env.dev.backup.*
+.direnv/
 google.json
 
 # Generated config files

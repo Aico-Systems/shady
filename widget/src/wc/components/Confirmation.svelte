@@ -4,6 +4,7 @@
     formatDateFull,
     formatTimeRange,
     getGoogleCalendarLink,
+    getOutlookCalendarLink,
     generateICSContent,
   } from '../lib/dateUtils';
   import type { BookingResult } from '../lib/bookingApi';
@@ -52,6 +53,18 @@
     });
     window.open(link, '_blank');
   }
+
+  function addToOutlookCalendar() {
+    const translator = get(t);
+    const link = getOutlookCalendarLink({
+      title: `${translator('widget.confirmation.with')} ${userName}`,
+      description: booking.googleMeetLink ? `Join: ${booking.googleMeetLink}` : undefined,
+      startTime,
+      endTime,
+      location: booking.googleMeetLink,
+    });
+    window.open(link, '_blank');
+  }
 </script>
 
 <div class="confirmation">
@@ -85,6 +98,9 @@
   <div class="actions">
     <button type="button" onclick={addToGoogleCalendar}>
       {$t('widget.labels.addGoogle')}
+    </button>
+    <button type="button" onclick={addToOutlookCalendar}>
+      {$t('widget.labels.addOutlook')}
     </button>
     <button type="button" onclick={downloadICS}>
       {$t('widget.labels.downloadIcs')}

@@ -10,10 +10,10 @@ The admin no longer vendors a nested `blueprint` submodule. Local development us
 
 ✅ **Implemented:**
 - Standalone Postgres database with Drizzle ORM
-- Google Calendar OAuth & sync
+- Google Workspace OAuth for Calendar and Gmail send
 - Smart availability aggregation across all users
 - Booking creation with conflict detection
-- Email notifications (MailSend integration)
+- Booking email notifications sent through the connected Google account
 - Logto authentication for admin portal
 - Multi-tenant organization support
 - Docker Compose stack with dedicated ports that do not overlap the current AICO dev ports
@@ -29,7 +29,9 @@ The admin no longer vendors a nested `blueprint` submodule. Local development us
 ```
 shady/
 ├── docker-compose.yml       ✅ Standalone stack configuration
-├── .env                      ✅ Environment configuration
+├── .envrc                    ✅ Local direnv helper
+├── .env.dev                  ✅ Local Doppler-synced secrets (gitignored)
+├── .env.dev.generated        ✅ Generated local non-secret env (gitignored)
 ├── google.json               ✅ Google OAuth credentials
 ├── backend/
 │   ├── src/
@@ -41,10 +43,12 @@ shady/
 │   │   │   └── init/
 │   │   │       └── 01_extensions.sql  ✅ SQL init
 │   │   ├── services/
-│   │   │   ├── GoogleCalendarService.ts  ✅ OAuth & Calendar API
+│   │   │   ├── GoogleConnectionService.ts ✅ Shared Google OAuth/token handling
+│   │   │   ├── GoogleCalendarService.ts  ✅ Calendar API
+│   │   │   ├── GoogleMailService.ts      ✅ Gmail notifications
 │   │   │   ├── AvailabilityService.ts    ✅ Smart slot aggregation
 │   │   │   ├── BookingService.ts         ✅ Booking management
-│   │   │   └── MailSendService.ts        ✅ Email notifications
+│   │   │   └── bookingEmailTemplates.ts  ✅ Shared email rendering helpers
 │   │   ├── utils/
 │   │   │   └── logtoAuth.ts  ✅ JWT verification
 │   │   ├── types/
@@ -106,31 +110,44 @@ shady/
    make logto-setup
    ```
 
-2. **MailSend API Token** (optional for MVP testing):
+2. **Google OAuth scopes**
    ```bash
-   MAILSEND_API_TOKEN=your_token_here
+   GOOGLE_SCOPES=https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/calendar.calendarlist.readonly,https://www.googleapis.com/auth/gmail.send
    ```
+   These are the minimum scopes Shady currently needs:
+   - `calendar.events` for event create, update, delete, and event listing during availability checks
+   - `calendar.calendarlist.readonly` to discover the user's primary calendar during connect
+   - `gmail.send` to send booking emails through Gmail
+   Existing connections need to reconnect after any scope change so Google issues refresh tokens with the updated permissions.
+   Source of truth:
+   - local dev reads `shady/.env.dev` for secrets and `shady/.env.dev.generated` for generated non-secrets
+   - deployed Shady reads generated deploy env from `shady/infra/env.nonsecret.json` plus Doppler secrets
 
 ### Setup
 
-1. **Sync shared Logto configuration:**
+1. **Sync local Shady secrets from Doppler:**
    ```bash
    cd shady
+   ./scripts/setup_doppler.sh
+   ```
+
+2. **Sync shared Logto configuration:**
+   ```bash
    make logto-setup
    ```
 
-2. **Start the Shady stack:**
+3. **Start the Shady stack:**
    ```bash
    make up
    ```
    The backend now pushes the schema and syncs Logto organizations automatically on startup.
 
-3. **Open Drizzle Studio if needed:**
+4. **Open Drizzle Studio if needed:**
    ```bash
    make db-studio
    ```
 
-4. **Push schema changes if you edit the DB schema:**
+5. **Push schema changes if you edit the DB schema:**
    ```bash
    make db-migrate
    ```
@@ -138,8 +155,10 @@ shady/
 
 ## Notes
 
-- Shady uses the shared AICO API resource `https://api.aico.local` and canonical booking scopes such as `bookings:read` and `bookings:manage_users`.
-- The Shady admin SPA app ID is provisioned by the root Logto setup and written back into `shady/.env`.
+- Shady uses the shared AICO Logto API resource for its environment:
+  local dev uses `https://api.aico.local`, production uses `https://api.aicoflow.com`.
+  Booking scopes remain the canonical shared scopes such as `bookings:read` and `bookings:manage_users`.
+- The Shady admin SPA app ID is provisioned by the root Logto setup and written into `shady/infra/env.nonsecret.json`, which regenerates `shady/.env.dev.generated`.
 
 ## 🔐 Security
 

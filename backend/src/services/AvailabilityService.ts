@@ -140,10 +140,11 @@ export class AvailabilityService {
       bookingsByUser.get(booking.bookingUserId)!.push(booking);
     }
 
-    // BATCH: Fetch Google Calendar busy times for ALL users with calendar integration
-    // Using Google's freebusy API which is MUCH faster than fetching individual events
+    // Fetch Google Calendar busy times for all users with calendar integration.
+    // We use each user's own OAuth connection here because cross-account free/busy
+    // aggregation is not reliable with a single user's delegated token.
     const usersWithCalendar = users.filter(u => u.googleCalendarId && u.googleRefreshToken);
-    const googleEventsByUser = await this.batchFetchGoogleCalendarBusyTimesOptimized(
+    const googleEventsByUser = await this.batchFetchGoogleCalendarBusyTimes(
       usersWithCalendar,
       startDate,
       endDate
@@ -317,100 +318,9 @@ export class AvailabilityService {
   }
 
   /**
-   * OPTIMIZED: Batch fetch Google Calendar busy times using freebusy API
-   * This is Google's recommended way to check availability for multiple calendars
-   * 
-   * Benefits:
-   * - Single API call per 50 users (vs 1 call per user)
-   * - Only returns busy periods (no unnecessary event details)
-   * - Much faster and uses less quota
-   * - In-memory caching with TTL
-   */
-  private async batchFetchGoogleCalendarBusyTimesOptimized(
-    users: Array<{ id: string; googleCalendarId: string | null; googleRefreshToken: string | null }>,
-    startDate: Date,
-    endDate: Date
-  ): Promise<Map<string, Array<{ start: Date; end: Date }>>> {
-    const result = new Map<string, Array<{ start: Date; end: Date }>>();
-    
-    if (users.length === 0) {
-      return result;
-    }
-
-    const now = Date.now();
-    const usersToFetch: typeof users = [];
-    let cacheHits = 0;
-
-    // Check cache first
-    for (const user of users) {
-      const cacheKey = `${user.id}:${startDate.toISOString()}:${endDate.toISOString()}`;
-      const cached = this.googleCalendarCache.get(cacheKey);
-
-      if (cached && cached.expiresAt > now) {
-        result.set(user.id, cached.data);
-        cacheHits++;
-      } else {
-        if (cached) {
-          this.googleCalendarCache.delete(cacheKey);
-        }
-        usersToFetch.push(user);
-      }
-    }
-
-    if (usersToFetch.length === 0) {
-      logger.debug('All Google Calendar busy times served from cache', { 
-        userCount: users.length 
-      });
-      return result;
-    }
-
-    // Prepare user-calendar mapping for batch query
-    const userCalendarMap = new Map<string, { calendarId: string; refreshToken: string }>();
-    for (const user of usersToFetch) {
-      if (user.googleCalendarId && user.googleRefreshToken) {
-        userCalendarMap.set(user.id, {
-          calendarId: user.googleCalendarId,
-          refreshToken: user.googleRefreshToken
-        });
-      }
-    }
-
-    // Use Google's freebusy API to batch query
-    const busyTimesByUser = await googleCalendarService.batchQueryFreeBusy(
-      userCalendarMap,
-      startDate,
-      endDate
-    );
-
-    // Cache results and add to return map
-    for (const [userId, busyTimes] of busyTimesByUser) {
-      result.set(userId, busyTimes);
-
-      // Cache the result
-      const cacheKey = `${userId}:${startDate.toISOString()}:${endDate.toISOString()}`;
-      this.googleCalendarCache.set(cacheKey, {
-        data: busyTimes,
-        expiresAt: now + this.CACHE_TTL_MS
-      });
-    }
-
-    logger.debug('Batch fetched Google Calendar busy times (optimized)', {
-      totalUsers: users.length,
-      cacheHits,
-      apiFetches: usersToFetch.length,
-      successCount: result.size
-    });
-
-    return result;
-  }
-
-  /**
-   * LEGACY: Batch fetch Google Calendar busy times for multiple users
-   * This uses individual events.list calls per user
-   * 
-   * NOTE: This is kept for backward compatibility but should be avoided
-   * Use batchFetchGoogleCalendarBusyTimesOptimized instead
-   * 
+   * Batch fetch Google Calendar busy times for multiple users
+   * This uses individual events.list calls per user under each user's own OAuth token.
+   *
    * Features:
    * - In-memory caching with TTL to reduce API calls
    * - Concurrency control to avoid rate limits
@@ -418,7 +328,7 @@ export class AvailabilityService {
    * - Filters out non-blocking events (all-day, cancelled, transparent)
    */
   private async batchFetchGoogleCalendarBusyTimes(
-    users: Array<{ id: string; googleCalendarId: string | null }>,
+    users: Array<{ id: string; googleCalendarId: string | null; googleRefreshToken: string | null }>,
     startDate: Date,
     endDate: Date
   ): Promise<Map<string, Array<{ start: Date; end: Date }>>> {

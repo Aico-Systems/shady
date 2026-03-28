@@ -1,13 +1,24 @@
 import { defineConfig } from 'drizzle-kit';
 import { config } from 'dotenv';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 
-// Load .env file from parent directory
-config({ path: '../.env' });
+const envCandidates = [
+  resolve(__dirname, '.env.dev'),
+  resolve(__dirname, '.env.dev.generated'),
+  resolve(__dirname, '.env')
+];
+
+for (const envPath of envCandidates) {
+  if (existsSync(envPath)) {
+    config({ path: envPath, override: false });
+  }
+}
 
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL is required. Set it in shady/.env file.');
+  throw new Error('DATABASE_URL is required. Set it through shady/.env.dev or the container environment.');
 }
 
 export default defineConfig({

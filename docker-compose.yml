@@ -5,11 +5,11 @@ services:
     image: pgvector/pgvector:pg17
     container_name: shady_postgres
     ports:
-      - "5436:5432"
+      - "${POSTGRES_HOST_PORT:-5436}:5432"
     environment:
-      POSTGRES_DB: booking_service
-      POSTGRES_USER: booking_user
-      POSTGRES_PASSWORD: booking_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - shady_postgres_data:/var/lib/postgresql/data
       - ./backend/src/db/init:/docker-entrypoint-initdb.d:ro
@@ -27,12 +27,15 @@ services:
       dockerfile: ./backend/Dockerfile
     container_name: shady_backend
     ports:
-      - "5006:5006"
+      - "${BACKEND_PORT:-5006}:${BACKEND_PORT:-5006}"
     env_file:
-      - .env
+      - .env.dev
+      - .env.dev.generated
     environment:
-      - DATABASE_URL=postgresql://booking_user:booking_password@postgres:5432/booking_service
-      - PORT=5006
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - PORT=${BACKEND_PORT}
+      - LOGTO_BACKEND_ENDPOINT=http://host.docker.internal:3001
+      - LOGTO_JWKS_URL=http://host.docker.internal:3001/oidc/jwks
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -52,10 +55,9 @@ services:
     container_name: shady_admin
     command: ["bun", "run", "dev", "--host", "0.0.0.0", "--port", "5175"]
     ports:
-      - "5175:5175"
-    environment:
-      - VITE_BACKEND_URL=http://localhost:5006
-      - VITE_WIDGET_URL=http://localhost:5178
+      - "${ADMIN_PORT:-5175}:5175"
+    env_file:
+      - .env.dev.generated
     volumes:
       - ./admin:/app
       - /app/node_modules
@@ -63,7 +65,6 @@ services:
       - ../backend/model-catalog:/app/backend/model-catalog:ro
       - ../backend/entity-schema:/app/backend/entity-schema:ro
       - ../backend/flow-schema:/app/backend/flow-schema:ro
-      - ./.env:/app/.env.development:ro
     networks:
       - shady_network
     restart: unless-stopped
@@ -76,14 +77,11 @@ services:
     command: ["bun", "run", "dev", "--host", "0.0.0.0", "--port", "5174"]
     ports:
       - "5174:5174"
-    environment:
-      - VITE_BACKEND_URL=http://localhost:5006
-      - VITE_WIDGET_URL=http://localhost:5178
-      - VITE_WIDGET_DEFAULT_ORG=aico-global
+    env_file:
+      - .env.dev.generated
     volumes:
       - ./widget:/app
       - /app/node_modules
-      - ./.env:/app/.env.development:ro
     networks:
       - shady_network
     restart: unless-stopped
@@ -94,12 +92,10 @@ services:
       dockerfile: Dockerfile
     container_name: shady_widget_embed
     ports:
-      - "5178:3001"
-    environment:
-      - WIDGET_PORT=3001
-      - VITE_BACKEND_URL=http://localhost:5006
-      - VITE_WIDGET_URL=http://localhost:5178
-      - VITE_WIDGET_DEFAULT_ORG=aico-global
+      - "${WIDGET_PORT:-5178}:3001"
+    env_file:
+      - .env.dev
+      - .env.dev.generated
     networks:
       - shady_network
     restart: unless-stopped
@@ -112,11 +108,12 @@ services:
     environment:
       NODE_ENV: development
       STUDIO_PORT: 4985
-      DATABASE_URL: postgresql://booking_user:booking_password@postgres:5432/booking_service
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     volumes:
       - drizzle_studio_workspace:/workspace
       - ./backend:/app/backend:ro
-      - ./.env:/workspace/.env:ro
+      - ./.env.dev:/workspace/.env.dev:ro
+      - ./.env.dev.generated:/workspace/.env.dev.generated:ro
       - ./scripts/drizzle-studio-entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "4985:4985"

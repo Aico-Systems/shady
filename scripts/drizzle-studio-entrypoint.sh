@@ -15,13 +15,14 @@ echo "Starting Drizzle Studio for Shady"
 echo "Studio link: https://local.drizzle.studio?port=${STUDIO_PORT}&host=localhost"
 echo ""
 
-if [ -f /workspace/.env ]; then
-  echo "Loading environment from /workspace/.env"
-  export $(grep -v '^#' /workspace/.env | grep -v '^$' | xargs)
-fi
+for env_file in /workspace/.env.dev /workspace/.env.dev.generated; do
+  if [ -f "$env_file" ]; then
+    echo "Loading environment from $env_file"
+    export $(grep -v '^#' "$env_file" | grep -v '^$' | xargs)
+  fi
+done
 
-# The mounted .env uses localhost:5436 for host access. Inside Docker we need the service name.
-export DATABASE_URL="${DATABASE_URL:-postgresql://booking_user:booking_password@postgres:5432/booking_service}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://${POSTGRES_USER:-booking_user}:${POSTGRES_PASSWORD:-booking_password}@postgres:5432/${POSTGRES_DB:-booking_service}}"
 
 echo "Using database connection: ${DATABASE_URL}"
 

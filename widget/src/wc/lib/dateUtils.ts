@@ -242,3 +242,26 @@ export function getGoogleCalendarLink(params: {
 
   return `https://calendar.google.com/calendar/render?${query.toString()}`;
 }
+
+/**
+ * Get Outlook Calendar add link
+ */
+export function getOutlookCalendarLink(params: {
+  title: string;
+  description?: string;
+  startTime: Date;
+  endTime: Date;
+  location?: string;
+}): string {
+  const query = new URLSearchParams({
+    path: '/calendar/action/compose',
+    rru: 'addevent',
+    subject: params.title,
+    startdt: params.startTime.toISOString(),
+    enddt: params.endTime.toISOString(),
+    ...(params.description && { body: params.description }),
+    ...(params.location && { location: params.location })
+  });
+
+  return `https://outlook.office.com/calendar/0/deeplink/compose?${query.toString()}`;
+}

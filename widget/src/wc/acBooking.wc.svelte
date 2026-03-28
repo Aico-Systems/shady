@@ -237,7 +237,10 @@
         userId: selectedSlot.userId,
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
-        visitorData,
+        visitorData: {
+          ...visitorData,
+          locale: currentLocale,
+        },
         notes,
       });
       currentStep = 'confirmation';

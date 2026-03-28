@@ -39,7 +39,8 @@
       "time": "Time",
       "meetingLink": "Meeting link",
       "addGoogle": "Add to Google Calendar",
-      "downloadIcs": "Download .ics file"
+      "addOutlook": "Add to Outlook",
+      "downloadIcs": "Apple / Outlook (.ics)"
     },
     "form": {
       "title": "Your information",

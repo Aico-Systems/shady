@@ -1,8 +1,9 @@
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { db } from '../db';
-import { bookings, bookingUsers, bookingConfigs } from '../db/schema';
+import { bookings, bookingUsers } from '../db/schema';
 import { googleCalendarService } from './GoogleCalendarService';
 import { availabilityService } from './AvailabilityService';
+import { googleMailService } from './GoogleMailService';
 import { getLogger } from '../logger';
 
 const logger = getLogger('BookingService');
@@ -40,7 +41,7 @@ export class BookingService {
    * 1. Validating availability
    * 2. Creating database record
    * 3. Creating Google Calendar event
-   * 4. Sending email notifications (via MailSendService)
+   * 4. Triggering email notifications (via publicRoutes/GoogleMailService)
    */
   async createBooking(data: CreateBookingData): Promise<BookingWithUser> {
     const { userId, organizationId, startTime, endTime, visitorData, notes } = data;
@@ -113,10 +114,8 @@ ${notes ? `\nNotes: ${notes}` : ''}
 
     logger.info('Booking created successfully', { bookingId: booking.id });
 
-    // 5. Send email notifications
-    // Note: This will be implemented when MailSendService is ready
-    // For now, we'll log it
-    logger.info('Email notifications should be sent', {
+    // 5. Email notifications are triggered by the public route after booking creation
+    logger.info('Booking ready for email notifications', {
       bookingId: booking.id,
       visitorEmail: visitorData.email,
       userEmail: user.email
@@ -281,12 +280,14 @@ ${notes ? `\nNotes: ${notes}` : ''}
 
     logger.info('Booking cancelled', { bookingId });
 
-    // TODO: Send cancellation emails
-
-    return {
+    const result = {
       booking: updatedBooking as Omit<typeof bookings.$inferSelect, 'visitorData'> & { visitorData: VisitorData },
       user
     };
+
+    await googleMailService.sendBookingCancellationNotifications(result);
+
+    return result;
   }
 
   /**

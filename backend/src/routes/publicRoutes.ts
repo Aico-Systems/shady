@@ -2,7 +2,7 @@ import { getLogger } from '../logger';
 import { jsonResponse, errorResponse } from './router';
 import { availabilityService } from '../services/AvailabilityService';
 import { bookingService } from '../services/BookingService';
-import { mailSendService } from '../services/MailSendService';
+import { googleMailService } from '../services/GoogleMailService';
 import { db } from '../db';
 import { bookingConfigs, bookingUsers } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -178,16 +178,7 @@ async function handleCreateBooking(request: Request): Promise<Response> {
       notes: body.notes
     });
 
-    // Send email notifications
-    try {
-      await Promise.all([
-        mailSendService.sendVisitorConfirmation(result),
-        mailSendService.sendUserNotification(result)
-      ]);
-    } catch (emailError) {
-      logger.warn('Failed to send emails', { emailError });
-      // Don't fail the booking if emails fail
-    }
+    await googleMailService.sendBookingCreatedNotifications(result);
 
     return jsonResponse({
       success: true,

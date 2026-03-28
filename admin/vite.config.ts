@@ -33,14 +33,12 @@ function hydrateAdminEnv(mode: string) {
   const localEnvFiles = [
     resolve(__dirname, '.env.development'),
     resolve(__dirname, '.env'),
+    resolve(__dirname, '../.env.dev'),
+    resolve(__dirname, '../.env.dev.generated'),
     resolve(__dirname, '../.env')
   ]
-  const rootEnvFiles =
-    mode === 'development' || mode === 'dev'
-      ? [resolve(__dirname, '../../.env.dev.generated'), resolve(__dirname, '../../.env.dev')]
-      : []
 
-  for (const envFile of [...localEnvFiles, ...rootEnvFiles]) {
+  for (const envFile of localEnvFiles) {
     loadEnvFileIntoProcess(envFile)
   }
 
