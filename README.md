@@ -155,9 +155,9 @@ shady/
 
 ## Notes
 
-- Shady uses the shared AICO Logto API resource for its environment:
-  local dev uses `https://api.aico.local`, production uses `https://api.aicoflow.com`.
-  Booking scopes remain the canonical shared scopes such as `bookings:read` and `bookings:manage_users`.
+- Shady uses its own Logto API resource:
+  local dev uses `https://api.shady.aico.local`, production uses `https://api.shady.aicoflow.com`.
+  Booking scopes remain the canonical booking scopes such as `bookings:read` and `bookings:manage_users`.
 - The Shady admin SPA app ID is provisioned by the root Logto setup and written into `shady/infra/env.nonsecret.json`, which regenerates `shady/.env.dev.generated`.
 
 ## 🔐 Security
