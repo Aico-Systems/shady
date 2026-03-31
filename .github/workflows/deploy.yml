@@ -110,16 +110,16 @@ jobs:
             backend/entity-schema
             backend/model-catalog
           submodules: recursive
-          path: /tmp/umbrella
+          path: .umbrella
 
       - name: Copy shared packages into build context
         if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
         run: |
-          cp -r /tmp/umbrella/blueprint "$GITHUB_WORKSPACE/blueprint"
-          mkdir -p "$GITHUB_WORKSPACE/backend"
-          cp -r /tmp/umbrella/backend/entity-schema "$GITHUB_WORKSPACE/backend/entity-schema"
-          cp -r /tmp/umbrella/backend/model-catalog "$GITHUB_WORKSPACE/backend/model-catalog"
-          rm -rf /tmp/umbrella
+          mv .umbrella/blueprint blueprint
+          mkdir -p backend
+          mv .umbrella/backend/entity-schema backend/entity-schema
+          mv .umbrella/backend/model-catalog backend/model-catalog
+          rm -rf .umbrella
 
       - name: Set up Docker Buildx
         if: steps.changed.outputs.changed == 'true'
