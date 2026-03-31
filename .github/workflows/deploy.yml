@@ -18,9 +18,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Umbrella repo tracks the correct commit for each shared dependency via submodules.
-  # We read the submodule pointers at runtime instead of hardcoding hashes.
-  UMBRELLA_REPO: Aico-Systems/Umbrella
 
 jobs:
   prepare:
@@ -99,25 +96,28 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Checkout shared packages (blueprint + backend schemas)
+      - name: Checkout blueprint
         if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
-        env:
-          GIT_AUTH: x-access-token:${{ secrets.SUBMODULES_PAT }}
-          ORG: Aico-Systems
-        run: |
-          # Blueprint: pinned to umbrella submodule pointer (single source of truth)
-          BLUEPRINT_SHA=$(git clone --depth 1 --bare --filter=blob:none \
-            "https://${GIT_AUTH}@github.com/${{ env.UMBRELLA_REPO }}.git" .umbrella.git 2>&1 >/dev/null \
-            && git -C .umbrella.git ls-tree HEAD blueprint | awk '{print $3}')
-          rm -rf .umbrella.git
-          git -c advice.detachedHead=false clone --filter=blob:none --no-checkout \
-            "https://${GIT_AUTH}@github.com/${ORG}/blueprint.git" blueprint
-          git -C blueprint -c advice.detachedHead=false checkout "$BLUEPRINT_SHA"
+        uses: actions/checkout@v4
+        with:
+          repository: Aico-Systems/blueprint
+          token: ${{ secrets.SUBMODULES_PAT }}
+          path: blueprint
 
-          # Backend schemas: blueprint transitively imports entity-schema (scopes)
-          # and model-catalog (ModelSelect). These are tiny, stable schema packages —
-          # just grab latest main.
-          git clone --depth 1 "https://${GIT_AUTH}@github.com/${ORG}/backend.git" .backend-tmp
+      - name: Checkout backend schema packages
+        if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
+        uses: actions/checkout@v4
+        with:
+          repository: Aico-Systems/backend
+          token: ${{ secrets.SUBMODULES_PAT }}
+          sparse-checkout: |
+            entity-schema
+            model-catalog
+          path: .backend-tmp
+
+      - name: Move backend packages into build context
+        if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
+        run: |
           mkdir -p backend
           mv .backend-tmp/entity-schema backend/entity-schema
           mv .backend-tmp/model-catalog backend/model-catalog
