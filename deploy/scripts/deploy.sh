@@ -6,8 +6,9 @@ set -e
 # =============================================================================
 # Called by deploy-agent.sh on the server (webhook-triggered CD).
 #
-# Entrypoint:
-#   deploy — Full deploy: pull images, migrate schema, restart services
+# Entrypoints:
+#   deploy — Full deploy (default): pull images, migrate schema, restart services
+#   reseed — Wipe database, push schema, restart (backend re-seeds CMS on startup)
 #
 # All paths are absolute — no cwd dependencies.
 # =============================================================================
@@ -292,7 +293,48 @@ main() {
     systemctl restart shady-deploy-webhook 2>/dev/null || true
 }
 
+# =============================================================================
+# Reseed: wipe database, push schema, restart (backend re-seeds on startup)
+# =============================================================================
+
+reseed_database() {
+    log_info "Reseeding database (wiping all data)..."
+
+    local DB_USER=${POSTGRES_USER}
+    local DB_NAME=${POSTGRES_DB}
+
+    # 1. Drop everything
+    log_info "Dropping all tables and extensions..."
+    dc exec -T shady-db psql -U "$DB_USER" -d "$DB_NAME" \
+        -c "DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS \"uuid-ossp\" CASCADE; DROP SCHEMA public CASCADE; CREATE SCHEMA public;" 2>/dev/null || true
+
+    # 2. Rebuild schema
+    migrate_database
+
+    log_info "Database reseeded (backend will seed CMS data on next start)"
+}
+
+cmd_reseed() {
+    log_info "Starting reseed..."
+
+    generate_infra
+    load_env
+    check_runtime_env
+
+    # Stop backend to avoid conflicts during reseed
+    dc stop shady-backend 2>/dev/null || true
+
+    start_infrastructure
+    reseed_database
+
+    # Restart backend (seeds CMS data on startup)
+    dc up -d --remove-orphans shady-backend shady-admin shady-widget
+    health_check
+    log_info "Reseed complete, services restarted"
+}
+
 case "${1:-deploy}" in
     deploy) main ;;
-    *)      log_error "Unknown command: $1 (use: deploy)"; exit 1 ;;
+    reseed) cmd_reseed ;;
+    *)      log_error "Unknown command: $1 (use: deploy, reseed)"; exit 1 ;;
 esac
