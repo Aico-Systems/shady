@@ -8,12 +8,12 @@ COPY backend/entity-schema /workspace/backend/entity-schema/
 COPY backend/model-catalog /workspace/backend/model-catalog/
 
 # Copy admin manifests and install deps
-COPY shady/admin/package.json shady/admin/bun.lock* /workspace/shady/admin/
+COPY admin/package.json admin/bun.lock* /workspace/shady/admin/
 RUN bun install --frozen-lockfile
 RUN ln -s /workspace/shady/admin/node_modules /workspace/node_modules
 
 # Copy admin source
-COPY shady/admin/ /workspace/shady/admin/
+COPY admin/ /workspace/shady/admin/
 
 # Build without environment variables (will use runtime config)
 RUN bun run build
