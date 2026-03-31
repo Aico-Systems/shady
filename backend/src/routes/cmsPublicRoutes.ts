@@ -1,5 +1,12 @@
+import { readFile } from 'fs/promises';
 import { getLogger } from '../logger';
 import { cmsService } from '../services/CmsService';
+import {
+  cmsMediaExists,
+  getCmsMediaContentType,
+  parseCmsMediaKey,
+  resolveCmsMediaPath,
+} from '../services/cmsMediaService';
 import { errorResponse, jsonResponse } from './router';
 
 const logger = getLogger('cmsPublicRoutes');
@@ -24,6 +31,24 @@ export async function handleCmsPublicRoutes(
       return jsonResponse({
         success: true,
         data: await cmsService.listPublishedBlogPosts(locale)
+      });
+    }
+
+    const mediaMatch = path.match(/^\/api\/public\/cms\/media\/(.+)$/);
+    if (mediaMatch && method === 'GET') {
+      const key = parseCmsMediaKey(mediaMatch[1]);
+      const exists = await cmsMediaExists(key);
+      if (!exists) {
+        return errorResponse('Not found', 404);
+      }
+
+      return new Response(await readFile(resolveCmsMediaPath(key)), {
+        headers: {
+          'Content-Type': getCmsMediaContentType(key),
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Content-Disposition': 'inline',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     }
 

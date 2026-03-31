@@ -283,21 +283,27 @@
           "title": "Launch a pilot",
           "description": "Get a walkthrough of call flows, integrations, and pricing built for your operations team.",
           "actionOne": "Book 30-min strategy call",
-          "actionTwo": "Download deployment brief"
+          "actionOneHref": "#booking",
+          "actionTwo": "Download deployment brief",
+          "actionTwoHref": "/docs/"
         },
         "support": {
           "tag": "Support",
           "title": "24/7 engineering desk",
           "description": "Existing customers can open a ticket or hop into a live bridge with our voice reliability team.",
           "actionOne": "Create support ticket",
-          "actionTwo": "View status page"
+          "actionOneHref": "mailto:support@aicoyo.com",
+          "actionTwo": "View status page",
+          "actionTwoHref": "/status/"
         },
         "partnerships": {
           "tag": "Partnerships",
           "title": "Integrations and co-selling",
           "description": "Partner with AICOYO to embed our agents into your stack or co-deliver voice automation programs.",
           "actionOne": "Contact partnerships",
-          "actionTwo": "Explore partner playbook"
+          "actionOneHref": "mailto:partners@aicoyo.com",
+          "actionTwo": "Explore partner playbook",
+          "actionTwoHref": "#use-cases"
         }
       }
     },
@@ -321,6 +327,7 @@
       "footnote": {
         "prefix": "Prefer async?",
         "link": "Email our team",
+        "href": "mailto:nikita@aicoyo.com",
         "suffix": "with your goals."
       }
     },
@@ -347,9 +354,28 @@
         "terms": "Terms",
         "policies": "Policies"
       },
+      "hrefs": {
+        "overview": "#hero",
+        "book": "#booking",
+        "platform": "#features",
+        "solutions": "#use-cases",
+        "implementation": "#how-it-works",
+        "docs": "/docs/",
+        "blog": "/blog/",
+        "security": "/security/",
+        "status": "/status/",
+        "imprint": "/imprint/",
+        "privacy": "/privacy/",
+        "terms": "/terms/",
+        "policies": "/policies/"
+      },
       "meta": {
         "location": "Germany · Remote-first",
-        "follow": "Follow"
+        "follow": "Follow",
+        "email": "nikita@aicoyo.com",
+        "emailHref": "mailto:nikita@aicoyo.com",
+        "linkedinHref": "https://www.linkedin.com",
+        "twitterHref": "https://twitter.com"
       },
       "legal": {
         "copyright": "© 2026 AICOYO. All rights reserved."
@@ -640,21 +666,27 @@
           "title": "Pilot starten",
           "description": "Erhalte einen Walkthrough zu Call-Flows, Integrationen und Pricing für dein Operations-Team.",
           "actionOne": "30-min Strategie-Call buchen",
-          "actionTwo": "Deployment-Brief herunterladen"
+          "actionOneHref": "#booking",
+          "actionTwo": "Deployment-Brief herunterladen",
+          "actionTwoHref": "/docs/"
         },
         "support": {
           "tag": "Support",
           "title": "24/7 Engineering Desk",
           "description": "Bestehende Kunden können ein Ticket eröffnen oder direkt mit unserem Voice-Reliability-Team in eine Live-Bridge springen.",
           "actionOne": "Support-Ticket erstellen",
-          "actionTwo": "Statusseite ansehen"
+          "actionOneHref": "mailto:support@aicoyo.com",
+          "actionTwo": "Statusseite ansehen",
+          "actionTwoHref": "/status/"
         },
         "partnerships": {
           "tag": "Partnerschaften",
           "title": "Integrationen und Co-Selling",
           "description": "Arbeite mit AICOYO zusammen, um unsere Agents in deinen Stack einzubetten oder Voice-Automation gemeinsam auszurollen.",
           "actionOne": "Partnerschaften kontaktieren",
-          "actionTwo": "Partner-Playbook ansehen"
+          "actionOneHref": "mailto:partners@aicoyo.com",
+          "actionTwo": "Partner-Playbook ansehen",
+          "actionTwoHref": "#use-cases"
         }
       }
     },
@@ -678,6 +710,7 @@
       "footnote": {
         "prefix": "Lieber asynchron?",
         "link": "Schreib unserem Team",
+        "href": "mailto:nikita@aicoyo.com",
         "suffix": "mit euren Zielen."
       }
     },
@@ -704,9 +737,28 @@
         "terms": "AGB",
         "policies": "Richtlinien"
       },
+      "hrefs": {
+        "overview": "#hero",
+        "book": "#booking",
+        "platform": "#features",
+        "solutions": "#use-cases",
+        "implementation": "#how-it-works",
+        "docs": "/docs/",
+        "blog": "/blog/",
+        "security": "/security/",
+        "status": "/status/",
+        "imprint": "/imprint/",
+        "privacy": "/privacy/",
+        "terms": "/terms/",
+        "policies": "/policies/"
+      },
       "meta": {
         "location": "Deutschland · Remote-first",
-        "follow": "Folgen"
+        "follow": "Folgen",
+        "email": "nikita@aicoyo.com",
+        "emailHref": "mailto:nikita@aicoyo.com",
+        "linkedinHref": "https://www.linkedin.com/company/aicoflow",
+        "twitterHref": "https://twitter.com"
       },
       "legal": {
         "copyright": "© 2026 AICOYO. Alle Rechte vorbehalten."

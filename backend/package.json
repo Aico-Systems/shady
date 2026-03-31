@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun --watch src/main.ts",
+    "dev": "bunx drizzle-kit push --force && bun --watch src/main.ts",
     "start": "bun src/main.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",

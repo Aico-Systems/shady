@@ -1,10 +1,11 @@
 FROM oven/bun:latest
-WORKDIR /app
+WORKDIR /workspace/shady/admin
 
-# Install deps once; source is bind-mounted in local dev.
-COPY blueprint/package.json blueprint/bun.lock blueprint/tsconfig.json ./blueprint/
-COPY shady/admin/package.json shady/admin/bun.lock* ./
+# Preserve the real workspace shape so local package deps resolve honestly.
+COPY blueprint/package.json blueprint/bun.lock blueprint/tsconfig.json /workspace/blueprint/
+COPY shady/admin/package.json shady/admin/bun.lock* /workspace/shady/admin/
 RUN bun install --frozen-lockfile
+RUN ln -s /workspace/shady/admin/node_modules /workspace/node_modules
 
 EXPOSE 5175
 

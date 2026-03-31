@@ -63,6 +63,20 @@ function normalizeTags(tags: string[]): string[] {
     .filter((tag, index, all) => all.indexOf(tag) === index);
 }
 
+function hasLocalizedContent(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value as Record<string, unknown>).some((localeValue) => {
+    if (!localeValue || typeof localeValue !== 'object' || Array.isArray(localeValue)) {
+      return false;
+    }
+
+    return Object.keys(localeValue as Record<string, unknown>).length > 0;
+  });
+}
+
 function mapBlogPost(row: typeof cmsBlogPosts.$inferSelect) {
   return {
     id: row.id,
@@ -92,10 +106,16 @@ export class CmsService {
       where: eq(cmsSiteContent.key, SITE_CONTENT_KEY)
     });
 
+    const draftContent = localizedContentSchema.parse(row?.draftContent || {});
+    const publishedContent = localizedContentSchema.parse(row?.publishedContent || {});
+    const effectiveDraftContent = hasLocalizedContent(draftContent)
+      ? draftContent
+      : publishedContent;
+
     return {
       key: SITE_CONTENT_KEY,
-      draftContent: localizedContentSchema.parse(row?.draftContent || {}),
-      publishedContent: localizedContentSchema.parse(row?.publishedContent || {}),
+      draftContent: effectiveDraftContent,
+      publishedContent,
       updatedAt: row?.updatedAt?.toISOString() || null,
       publishedAt: row?.publishedAt?.toISOString() || null,
       updatedBy: row?.updatedBy || null,

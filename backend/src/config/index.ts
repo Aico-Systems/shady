@@ -59,6 +59,10 @@ export const config = {
   DEFAULT_BOOKING_DURATION_MINUTES: parseInt(getEnvOptional('DEFAULT_BOOKING_DURATION_MINUTES', '30')),
   DEFAULT_ADVANCE_BOOKING_DAYS: parseInt(getEnvOptional('DEFAULT_ADVANCE_BOOKING_DAYS', '30')),
 
+  // Uploads
+  UPLOAD_STORAGE_PATH: getEnvOptional('UPLOAD_STORAGE_PATH', '/data/uploads'),
+  UPLOAD_MAX_FILE_SIZE_MB: parseInt(getEnvOptional('UPLOAD_MAX_FILE_SIZE_MB', '25')),
+
   // URLs
   BACKEND_URL: getEnvOptional('BACKEND_URL', 'http://localhost:5006'),
   ADMIN_URL: getEnvOptional('ADMIN_URL', 'http://localhost:5175'),

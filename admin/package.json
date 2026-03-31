@@ -10,6 +10,7 @@
     "check": "node ./node_modules/svelte-check/bin/svelte-check --tsconfig ./tsconfig.app.json"
   },
   "dependencies": {
+    "@aico/blueprint": "file:../../blueprint",
     "@logto/browser": "^3.0.12",
     "@lucide/svelte": "^0.525.0",
     "svelte-i18n": "^4.0.1"

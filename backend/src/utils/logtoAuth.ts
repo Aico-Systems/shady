@@ -331,7 +331,10 @@ export async function validateLogtoToken(
     : [];
 
   // Check if user is super admin
-  let isSuperAdmin = scopes.includes('super_admin') || scopes.includes('all:organizations');
+  let isSuperAdmin =
+    verifiedPayload.is_super_admin === true ||
+    scopes.includes('super_admin') ||
+    scopes.includes('all:organizations');
 
   if (!isSuperAdmin) {
     const userId = verifiedPayload.sub as string;

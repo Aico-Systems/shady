@@ -21,7 +21,7 @@ async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
     headers.set("X-Organization-Id", organization.id);
   }
 
-  if (options?.body && !headers.has("Content-Type")) {
+  if (options?.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -158,6 +158,13 @@ export interface CmsBlogPostInput {
   publishedAt?: string | null;
 }
 
+export interface CmsMediaUploadResult {
+  key: string;
+  url: string;
+  contentType: string;
+  kind: "image" | "video";
+}
+
 // Users API
 export const usersApi = {
   list: () => apiCall<OrgMember[]>('/api/admin/users'),
@@ -268,5 +275,15 @@ export const cmsApi = {
   deletePost: (id: string) =>
     apiCall<CmsBlogPost>(`/api/admin/cms/posts/${id}`, {
       method: 'DELETE'
-    })
+    }),
+
+  uploadMedia: (file: File, kind: "image" | "video") => {
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("kind", kind);
+    return apiCall<CmsMediaUploadResult>('/api/admin/cms/media', {
+      method: 'POST',
+      body: formData
+    });
+  }
 };

@@ -59,6 +59,7 @@ function resolveExistingPath(candidates: string[], sentinel: string) {
 
 const blueprintPath = resolveExistingPath(
   [
+    resolve(__dirname, 'node_modules/@aico/blueprint/src'),
     resolve(__dirname, 'blueprint/src'),
     resolve(__dirname, '../../blueprint/src')
   ],
@@ -100,6 +101,7 @@ export default defineConfig(({ mode }) => {
   ],
   envPrefix: 'VITE_',
   resolve: {
+    preserveSymlinks: true,
     alias: {
       '@aico/blueprint': blueprintPath,
       '@aico/model-catalog': modelCatalogPath,

@@ -9,6 +9,20 @@ const logger = getLogger('cmsSeedService');
 const SITE_CONTENT_KEY = 'landing-site-content';
 const SYSTEM_USER = 'system:cms-seed';
 
+function hasContent(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value as Record<string, unknown>).some((localeValue) => {
+    if (!localeValue || typeof localeValue !== 'object' || Array.isArray(localeValue)) {
+      return false;
+    }
+
+    return Object.keys(localeValue as Record<string, unknown>).length > 0;
+  });
+}
+
 type SeedBlogPost = {
   slug: string;
   locale: string;
@@ -39,7 +53,31 @@ export class CmsSeedService {
     });
 
     if (existing) {
-      logger.debug('CMS site content already present, skipping seed');
+      const draftPresent = hasContent(existing.draftContent);
+      const publishedPresent = hasContent(existing.publishedContent);
+
+      if (draftPresent && publishedPresent) {
+        logger.debug('CMS site content already present, skipping seed');
+        return;
+      }
+
+      const now = new Date();
+      await db
+        .update(cmsSiteContent)
+        .set({
+          draftContent: draftPresent ? existing.draftContent : siteContentSeed,
+          publishedContent: publishedPresent ? existing.publishedContent : siteContentSeed,
+          updatedBy: SYSTEM_USER,
+          publishedBy: publishedPresent ? existing.publishedBy || SYSTEM_USER : SYSTEM_USER,
+          updatedAt: now,
+          publishedAt: publishedPresent ? existing.publishedAt || now : now
+        })
+        .where(eq(cmsSiteContent.key, SITE_CONTENT_KEY));
+
+      logger.info('Backfilled CMS site content', {
+        draftSeeded: !draftPresent,
+        publishedSeeded: !publishedPresent
+      });
       return;
     }
 

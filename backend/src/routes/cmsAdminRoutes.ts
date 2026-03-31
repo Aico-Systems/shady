@@ -1,5 +1,6 @@
 import { getLogger } from '../logger';
 import { cmsService } from '../services/CmsService';
+import { storeCmsMedia } from '../services/cmsMediaService';
 import { errorResponse, jsonResponse } from './router';
 
 const logger = getLogger('cmsAdminRoutes');
@@ -40,6 +41,25 @@ export async function handleCmsAdminRoutes(
         { success: true, data: await cmsService.createBlogPost(body, userId) },
         201
       );
+    }
+
+    if (path === '/api/admin/cms/media' && method === 'POST') {
+      const contentType = request.headers.get('content-type') || '';
+      if (!contentType.includes('multipart/form-data')) {
+        return errorResponse('Expected multipart/form-data', 400);
+      }
+
+      const formData = await request.formData();
+      const file = formData.get('file');
+      const kindValue = formData.get('kind');
+      const kind = kindValue === 'video' ? 'video' : 'image';
+
+      if (!(file instanceof File)) {
+        return errorResponse("Missing 'file' field in form data", 400);
+      }
+
+      const stored = await storeCmsMedia(kind, userId, file);
+      return jsonResponse({ success: true, data: stored }, 201);
     }
 
     const postMatch = path.match(/^\/api\/admin\/cms\/posts\/([^/]+)$/);

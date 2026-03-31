@@ -9,8 +9,8 @@
     "baseUrl": ".",
     "typeRoots": ["./node_modules/@types", "./src/types"],
     "paths": {
-      "@aico/blueprint": ["./blueprint/src", "../../blueprint/src"],
-      "@aico/blueprint/*": ["./blueprint/src/*", "../../blueprint/src/*"],
+      "@aico/blueprint": ["./node_modules/@aico/blueprint/src", "./blueprint/src", "../../blueprint/src"],
+      "@aico/blueprint/*": ["./node_modules/@aico/blueprint/src/*", "./blueprint/src/*", "../../blueprint/src/*"],
       "@aico/model-catalog": ["./backend/model-catalog/src", "../../backend/model-catalog/src"],
       "@aico/model-catalog/*": ["./backend/model-catalog/src/*", "../../backend/model-catalog/src/*"],
       "@aico/entity-schema": ["./backend/entity-schema/src", "../../backend/entity-schema/src"],

@@ -1,25 +1,26 @@
 FROM oven/bun:latest AS builder
-WORKDIR /app
+WORKDIR /workspace/shady/admin
 
 # Copy blueprint and its AICO backend dependencies
-COPY blueprint/package.json blueprint/bun.lock blueprint/tsconfig.json ./blueprint/
-COPY blueprint/src ./blueprint/src/
-COPY backend/entity-schema ./backend/entity-schema/
-COPY backend/model-catalog ./backend/model-catalog/
+COPY blueprint/package.json blueprint/bun.lock blueprint/tsconfig.json /workspace/blueprint/
+COPY blueprint/src /workspace/blueprint/src/
+COPY backend/entity-schema /workspace/backend/entity-schema/
+COPY backend/model-catalog /workspace/backend/model-catalog/
 
 # Copy admin manifests and install deps
-COPY admin/package.json admin/bun.lock* ./
+COPY shady/admin/package.json shady/admin/bun.lock* /workspace/shady/admin/
 RUN bun install --frozen-lockfile
+RUN ln -s /workspace/shady/admin/node_modules /workspace/node_modules
 
 # Copy admin source
-COPY admin/ ./
+COPY shady/admin/ /workspace/shady/admin/
 
 # Build without environment variables (will use runtime config)
 RUN bun run build
 
 FROM oven/bun:latest
 WORKDIR /app
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /workspace/shady/admin/dist ./dist
 
 # Create entrypoint script that injects runtime config
 RUN cat <<'EOF' > /entrypoint.sh
