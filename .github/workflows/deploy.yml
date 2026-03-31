@@ -18,7 +18,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BLUEPRINT_REF: cb0fcecf839c716839d9495170d0e41a0f8b990d
+  # Umbrella repo tracks the correct commit for each shared dependency via submodules.
+  # We read the submodule pointers at runtime instead of hardcoding hashes.
+  UMBRELLA_REPO: Aico-Systems/Umbrella
 
 jobs:
   prepare:
@@ -97,25 +99,36 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Checkout blueprint
-        if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
-        uses: actions/checkout@v4
-        with:
-          repository: Aico-Systems/blueprint
-          ref: ${{ env.BLUEPRINT_REF }}
-          path: blueprint
-          token: ${{ secrets.SUBMODULES_PAT }}
-
-      - name: Checkout AICO backend packages (blueprint dependencies)
+      - name: Checkout shared packages from umbrella submodule pointers
         if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
         run: |
+          PAT="${{ secrets.SUBMODULES_PAT }}"
+
+          # Read submodule commit SHAs from the umbrella repo (single source of truth)
           git clone --depth 1 --filter=blob:none --sparse \
-            https://x-access-token:${{ secrets.SUBMODULES_PAT }}@github.com/Aico-Systems/backend.git /tmp/aico-backend
-          cd /tmp/aico-backend
+            "https://x-access-token:${PAT}@github.com/${{ env.UMBRELLA_REPO }}.git" /tmp/umbrella
+          cd /tmp/umbrella && git sparse-checkout set .gitmodules
+          BLUEPRINT_SHA=$(git ls-tree HEAD blueprint | awk '{print $3}')
+          BACKEND_SHA=$(git ls-tree HEAD backend | awk '{print $3}')
+          echo "Blueprint: $BLUEPRINT_SHA, Backend: $BACKEND_SHA"
+          cd "$GITHUB_WORKSPACE" && rm -rf /tmp/umbrella
+
+          # Checkout blueprint at the umbrella-pinned commit
+          git clone --depth 1 --filter=blob:none \
+            "https://x-access-token:${PAT}@github.com/Aico-Systems/blueprint.git" \
+            -b "$BLUEPRINT_SHA" blueprint 2>/dev/null || \
+          (git clone --filter=blob:none \
+            "https://x-access-token:${PAT}@github.com/Aico-Systems/blueprint.git" blueprint && \
+           cd blueprint && git checkout "$BLUEPRINT_SHA")
+
+          # Sparse-checkout backend packages at the umbrella-pinned commit
+          git clone --filter=blob:none --sparse \
+            "https://x-access-token:${PAT}@github.com/Aico-Systems/backend.git" /tmp/aico-backend
+          cd /tmp/aico-backend && git checkout "$BACKEND_SHA"
           git sparse-checkout set entity-schema model-catalog
-          mkdir -p $GITHUB_WORKSPACE/backend
-          cp -r entity-schema $GITHUB_WORKSPACE/backend/entity-schema
-          cp -r model-catalog $GITHUB_WORKSPACE/backend/model-catalog
+          mkdir -p "$GITHUB_WORKSPACE/backend"
+          cp -r entity-schema "$GITHUB_WORKSPACE/backend/entity-schema"
+          cp -r model-catalog "$GITHUB_WORKSPACE/backend/model-catalog"
           rm -rf /tmp/aico-backend
 
       - name: Set up Docker Buildx
