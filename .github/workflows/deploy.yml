@@ -105,22 +105,19 @@ jobs:
           GIT_AUTH: x-access-token:${{ secrets.SUBMODULES_PAT }}
           ORG: Aico-Systems
         run: |
-          # Read pinned submodule SHAs from umbrella repo (single source of truth)
-          git clone --depth 1 --bare --filter=blob:none \
-            "https://${GIT_AUTH}@github.com/${{ env.UMBRELLA_REPO }}.git" .umbrella.git
-          BLUEPRINT_SHA=$(git -C .umbrella.git ls-tree HEAD blueprint | awk '{print $3}')
-          BACKEND_SHA=$(git -C .umbrella.git ls-tree HEAD backend | awk '{print $3}')
+          # Blueprint: pinned to umbrella submodule pointer (single source of truth)
+          BLUEPRINT_SHA=$(git clone --depth 1 --bare --filter=blob:none \
+            "https://${GIT_AUTH}@github.com/${{ env.UMBRELLA_REPO }}.git" .umbrella.git 2>&1 >/dev/null \
+            && git -C .umbrella.git ls-tree HEAD blueprint | awk '{print $3}')
           rm -rf .umbrella.git
-
-          # Blueprint: full checkout at pinned SHA
           git -c advice.detachedHead=false clone --filter=blob:none --no-checkout \
             "https://${GIT_AUTH}@github.com/${ORG}/blueprint.git" blueprint
           git -C blueprint -c advice.detachedHead=false checkout "$BLUEPRINT_SHA"
 
-          # Backend: clone and checkout pinned SHA, copy what we need
-          git -c advice.detachedHead=false clone \
-            "https://${GIT_AUTH}@github.com/${ORG}/backend.git" .backend-tmp
-          git -C .backend-tmp -c advice.detachedHead=false checkout "$BACKEND_SHA"
+          # Backend schemas: blueprint transitively imports entity-schema (scopes)
+          # and model-catalog (ModelSelect). These are tiny, stable schema packages —
+          # just grab latest main.
+          git clone --depth 1 "https://${GIT_AUTH}@github.com/${ORG}/backend.git" .backend-tmp
           mkdir -p backend
           mv .backend-tmp/entity-schema backend/entity-schema
           mv .backend-tmp/model-catalog backend/model-catalog
