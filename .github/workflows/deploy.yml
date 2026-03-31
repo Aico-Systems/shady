@@ -117,10 +117,10 @@ jobs:
             "https://${GIT_AUTH}@github.com/${ORG}/blueprint.git" blueprint
           git -C blueprint -c advice.detachedHead=false checkout "$BLUEPRINT_SHA"
 
-          # Backend: only need entity-schema + model-catalog at pinned SHA
-          git -c advice.detachedHead=false clone --filter=blob:none --no-checkout \
+          # Backend: clone and checkout pinned SHA, copy what we need
+          git -c advice.detachedHead=false clone \
             "https://${GIT_AUTH}@github.com/${ORG}/backend.git" .backend-tmp
-          git -C .backend-tmp -c advice.detachedHead=false checkout "$BACKEND_SHA" -- entity-schema model-catalog
+          git -C .backend-tmp -c advice.detachedHead=false checkout "$BACKEND_SHA"
           mkdir -p backend
           mv .backend-tmp/entity-schema backend/entity-schema
           mv .backend-tmp/model-catalog backend/model-catalog
