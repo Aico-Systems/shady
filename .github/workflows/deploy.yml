@@ -101,25 +101,31 @@ jobs:
 
       - name: Checkout shared packages (blueprint + backend schemas)
         if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.UMBRELLA_REPO }}
-          token: ${{ secrets.SUBMODULES_PAT }}
-          sparse-checkout: |
-            blueprint
-            backend/entity-schema
-            backend/model-catalog
-          submodules: recursive
-          path: .umbrella
-
-      - name: Copy shared packages into build context
-        if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
+        env:
+          GIT_AUTH: x-access-token:${{ secrets.SUBMODULES_PAT }}
+          ORG: Aico-Systems
         run: |
-          mv .umbrella/blueprint blueprint
+          # Read pinned submodule SHAs from umbrella repo (single source of truth)
+          git clone --depth 1 --bare --filter=blob:none \
+            "https://${GIT_AUTH}@github.com/${{ env.UMBRELLA_REPO }}.git" .umbrella.git
+          BLUEPRINT_SHA=$(git -C .umbrella.git ls-tree HEAD blueprint | awk '{print $3}')
+          BACKEND_SHA=$(git -C .umbrella.git ls-tree HEAD backend | awk '{print $3}')
+          rm -rf .umbrella.git
+
+          # Blueprint: full checkout at pinned SHA
+          git -c advice.detachedHead=false clone --depth 1 \
+            "https://${GIT_AUTH}@github.com/${ORG}/blueprint.git" --branch main blueprint
+          git -C blueprint -c advice.detachedHead=false checkout "$BLUEPRINT_SHA"
+
+          # Backend: only entity-schema + model-catalog at pinned SHA
+          git -c advice.detachedHead=false clone --filter=blob:none --no-checkout \
+            "https://${GIT_AUTH}@github.com/${ORG}/backend.git" .backend-sparse
+          cd .backend-sparse && git sparse-checkout set entity-schema model-catalog
+          git -c advice.detachedHead=false checkout "$BACKEND_SHA" && cd ..
           mkdir -p backend
-          mv .umbrella/backend/entity-schema backend/entity-schema
-          mv .umbrella/backend/model-catalog backend/model-catalog
-          rm -rf .umbrella
+          mv .backend-sparse/entity-schema backend/entity-schema
+          mv .backend-sparse/model-catalog backend/model-catalog
+          rm -rf .backend-sparse
 
       - name: Set up Docker Buildx
         if: steps.changed.outputs.changed == 'true'
