@@ -117,17 +117,14 @@ jobs:
             "https://${GIT_AUTH}@github.com/${ORG}/blueprint.git" blueprint
           git -C blueprint -c advice.detachedHead=false checkout "$BLUEPRINT_SHA"
 
-          # Backend: only entity-schema + model-catalog at pinned SHA
-          git -c advice.detachedHead=false clone --filter=blob:none --sparse \
-            "https://${GIT_AUTH}@github.com/${ORG}/backend.git" .backend-sparse
-          cd .backend-sparse
-          git sparse-checkout set entity-schema model-catalog
-          git -c advice.detachedHead=false checkout "$BACKEND_SHA"
-          cd ..
+          # Backend: only need entity-schema + model-catalog at pinned SHA
+          git -c advice.detachedHead=false clone --filter=blob:none --no-checkout \
+            "https://${GIT_AUTH}@github.com/${ORG}/backend.git" .backend-tmp
+          git -C .backend-tmp -c advice.detachedHead=false checkout "$BACKEND_SHA" -- entity-schema model-catalog
           mkdir -p backend
-          mv .backend-sparse/entity-schema backend/entity-schema
-          mv .backend-sparse/model-catalog backend/model-catalog
-          rm -rf .backend-sparse
+          mv .backend-tmp/entity-schema backend/entity-schema
+          mv .backend-tmp/model-catalog backend/model-catalog
+          rm -rf .backend-tmp
 
       - name: Set up Docker Buildx
         if: steps.changed.outputs.changed == 'true'
