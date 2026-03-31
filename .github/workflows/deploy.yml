@@ -114,18 +114,16 @@ jobs:
           rm -rf /tmp/umbrella
 
           # Checkout blueprint at the umbrella-pinned commit
-          git clone --depth 1 --filter=blob:none \
-            "https://x-access-token:${PAT}@github.com/Aico-Systems/blueprint.git" \
-            -b "$BLUEPRINT_SHA" blueprint 2>/dev/null || \
-          (git clone --filter=blob:none \
-            "https://x-access-token:${PAT}@github.com/Aico-Systems/blueprint.git" blueprint && \
-           cd blueprint && git checkout "$BLUEPRINT_SHA")
+          git clone --filter=blob:none --no-checkout \
+            "https://x-access-token:${PAT}@github.com/Aico-Systems/blueprint.git" blueprint
+          cd blueprint && git -c advice.detachedHead=false checkout "$BLUEPRINT_SHA" && cd ..
 
           # Sparse-checkout backend packages at the umbrella-pinned commit
-          git clone --filter=blob:none --sparse \
+          git clone --filter=blob:none --no-checkout \
             "https://x-access-token:${PAT}@github.com/Aico-Systems/backend.git" /tmp/aico-backend
-          cd /tmp/aico-backend && git checkout "$BACKEND_SHA"
+          cd /tmp/aico-backend
           git sparse-checkout set entity-schema model-catalog
+          git checkout "$BACKEND_SHA"
           mkdir -p "$GITHUB_WORKSPACE/backend"
           cp -r entity-schema "$GITHUB_WORKSPACE/backend/entity-schema"
           cp -r model-catalog "$GITHUB_WORKSPACE/backend/model-catalog"
