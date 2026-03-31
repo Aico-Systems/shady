@@ -105,13 +105,13 @@ jobs:
           PAT="${{ secrets.SUBMODULES_PAT }}"
 
           # Read submodule commit SHAs from the umbrella repo (single source of truth)
-          git clone --depth 1 --filter=blob:none --sparse \
+          # --bare: no checkout needed, ls-tree reads from the object store directly
+          git clone --depth 1 --bare --filter=blob:none \
             "https://x-access-token:${PAT}@github.com/${{ env.UMBRELLA_REPO }}.git" /tmp/umbrella
-          cd /tmp/umbrella && git sparse-checkout set .gitmodules
-          BLUEPRINT_SHA=$(git ls-tree HEAD blueprint | awk '{print $3}')
-          BACKEND_SHA=$(git ls-tree HEAD backend | awk '{print $3}')
+          BLUEPRINT_SHA=$(git -C /tmp/umbrella ls-tree HEAD blueprint | awk '{print $3}')
+          BACKEND_SHA=$(git -C /tmp/umbrella ls-tree HEAD backend | awk '{print $3}')
           echo "Blueprint: $BLUEPRINT_SHA, Backend: $BACKEND_SHA"
-          cd "$GITHUB_WORKSPACE" && rm -rf /tmp/umbrella
+          rm -rf /tmp/umbrella
 
           # Checkout blueprint at the umbrella-pinned commit
           git clone --depth 1 --filter=blob:none \
