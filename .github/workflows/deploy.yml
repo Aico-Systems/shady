@@ -99,35 +99,27 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Checkout shared packages from umbrella submodule pointers
+      - name: Checkout shared packages (blueprint + backend schemas)
+        if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UMBRELLA_REPO }}
+          token: ${{ secrets.SUBMODULES_PAT }}
+          sparse-checkout: |
+            blueprint
+            backend/entity-schema
+            backend/model-catalog
+          submodules: recursive
+          path: /tmp/umbrella
+
+      - name: Copy shared packages into build context
         if: steps.changed.outputs.changed == 'true' && matrix.service == 'admin'
         run: |
-          PAT="${{ secrets.SUBMODULES_PAT }}"
-
-          # Read submodule commit SHAs from the umbrella repo (single source of truth)
-          # --bare: no checkout needed, ls-tree reads from the object store directly
-          git clone --depth 1 --bare --filter=blob:none \
-            "https://x-access-token:${PAT}@github.com/${{ env.UMBRELLA_REPO }}.git" /tmp/umbrella
-          BLUEPRINT_SHA=$(git -C /tmp/umbrella ls-tree HEAD blueprint | awk '{print $3}')
-          BACKEND_SHA=$(git -C /tmp/umbrella ls-tree HEAD backend | awk '{print $3}')
-          echo "Blueprint: $BLUEPRINT_SHA, Backend: $BACKEND_SHA"
-          rm -rf /tmp/umbrella
-
-          # Checkout blueprint at the umbrella-pinned commit
-          git clone --filter=blob:none --no-checkout \
-            "https://x-access-token:${PAT}@github.com/Aico-Systems/blueprint.git" blueprint
-          cd blueprint && git -c advice.detachedHead=false checkout "$BLUEPRINT_SHA" && cd ..
-
-          # Sparse-checkout backend packages at the umbrella-pinned commit
-          git clone --filter=blob:none --no-checkout \
-            "https://x-access-token:${PAT}@github.com/Aico-Systems/backend.git" /tmp/aico-backend
-          cd /tmp/aico-backend
-          git sparse-checkout set entity-schema model-catalog
-          git checkout "$BACKEND_SHA"
+          cp -r /tmp/umbrella/blueprint "$GITHUB_WORKSPACE/blueprint"
           mkdir -p "$GITHUB_WORKSPACE/backend"
-          cp -r entity-schema "$GITHUB_WORKSPACE/backend/entity-schema"
-          cp -r model-catalog "$GITHUB_WORKSPACE/backend/model-catalog"
-          rm -rf /tmp/aico-backend
+          cp -r /tmp/umbrella/backend/entity-schema "$GITHUB_WORKSPACE/backend/entity-schema"
+          cp -r /tmp/umbrella/backend/model-catalog "$GITHUB_WORKSPACE/backend/model-catalog"
+          rm -rf /tmp/umbrella
 
       - name: Set up Docker Buildx
         if: steps.changed.outputs.changed == 'true'
