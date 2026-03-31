@@ -10,9 +10,24 @@
     toastService,
     isSuperAdmin,
   } from "@aico/blueprint";
+  import { SegmentedToggle } from "@aico/blueprint";
   import { cmsApi, type CmsBlogPost, type CmsBlogPostInput } from "../../api";
 
   const CMS_LOCALES = ["en", "de"] as const;
+  type CmsLocale = (typeof CMS_LOCALES)[number];
+
+  const LOCALE_TOGGLE_ITEMS = CMS_LOCALES.map((code) => ({
+    id: code,
+    label: code.toUpperCase(),
+  }));
+
+  let activeLocale = $state<CmsLocale>("en");
+
+  function switchLocale(id: string) {
+    activeLocale = id as CmsLocale;
+    const firstInLocale = posts.find((p) => p.locale === activeLocale);
+    selectPost(firstInLocale?.id ?? null);
+  }
 
   function createEmptyPost(): CmsBlogPostInput {
     return {
@@ -110,6 +125,7 @@
 
   function createNewPost() {
     selectPost(null);
+    postForm.locale = activeLocale;
   }
 
   function buildPostPayload(statusOverride?: "draft" | "published"): CmsBlogPostInput {
@@ -212,6 +228,8 @@
     selectedPostId ? posts.find((candidate) => candidate.id === selectedPostId) || null : null,
   );
 
+  const filteredPosts = $derived(posts.filter((p) => p.locale === activeLocale));
+
   const resolvedSlug = $derived(slugify(postForm.slug || postForm.title || ""));
   const effectiveSeoTitle = $derived((postForm.seoTitle || postForm.title || "").trim());
   const effectiveSeoDescription = $derived((postForm.seoDescription || postForm.excerpt || "").trim());
@@ -245,14 +263,19 @@
       <div class="post-list">
         <div class="post-list-header">
           <h3>Posts</h3>
-          <Badge tone="muted" size="sm" label={`${posts.length} posts`} />
+          <SegmentedToggle
+            items={LOCALE_TOGGLE_ITEMS}
+            activeId={activeLocale}
+            onChange={switchLocale}
+            ariaLabel="Filter posts by locale"
+          />
         </div>
 
-        {#if posts.length === 0}
+        {#if filteredPosts.length === 0}
           <StateBlock variant="empty" message="No blog posts yet." />
         {:else}
           <div class="post-list-items">
-            {#each posts as post}
+            {#each filteredPosts as post}
               <button
                 type="button"
                 class="post-list-item"
@@ -269,7 +292,6 @@
                 </div>
                 <div class="post-list-item-meta">
                   <span>/{post.slug}</span>
-                  <span>{post.locale.toUpperCase()}</span>
                   <span>{post.category}</span>
                 </div>
               </button>
@@ -341,7 +363,6 @@
             <div class="seo-card">
               <div class="seo-card-head">
                 <h4>SEO snapshot</h4>
-                <Badge tone="info" size="sm" label={postForm.locale.toUpperCase()} />
               </div>
 
               <div class="seo-metrics">
@@ -367,14 +388,6 @@
             <div class="editor-grid compact">
               <FormField label="Slug" help="Lowercase URL segment.">
                 <input type="text" bind:value={postForm.slug} placeholder="voice-ai-postmortem" />
-              </FormField>
-
-              <FormField label="Locale">
-                <select bind:value={postForm.locale}>
-                  {#each CMS_LOCALES as localeCode}
-                    <option value={localeCode}>{localeCode.toUpperCase()}</option>
-                  {/each}
-                </select>
               </FormField>
 
               <FormField label="Category">
