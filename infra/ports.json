@@ -53,6 +53,7 @@
       "POSTGRES_HOST_PORT": 5436,
 
       "LOGTO_ENDPOINT": "http://localhost:3001",
+      "LOGTO_BACKEND_ENDPOINT": "http://localhost:3001",
       "LOGTO_ISSUER": "http://localhost:3001/oidc",
       "LOGTO_API_RESOURCE": "https://api.shady.aico.local",
 
@@ -82,6 +83,7 @@
       "POSTGRES_DB": "booking_service",
 
       "LOGTO_ENDPOINT": "https://auth.aicoflow.xyz",
+      "LOGTO_BACKEND_ENDPOINT": "https://auth.aicoflow.xyz",
       "LOGTO_ISSUER": "https://auth.aicoflow.xyz/oidc",
       "LOGTO_API_RESOURCE": "https://api.shady.aicoflow.com",
 

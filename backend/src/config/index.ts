@@ -42,7 +42,7 @@ export const config = {
 
   // Logto
   LOGTO_ENDPOINT: getEnv('LOGTO_ENDPOINT'),
-  LOGTO_BACKEND_ENDPOINT: getEnvOptional('LOGTO_BACKEND_ENDPOINT', getEnv('LOGTO_ENDPOINT')),
+  LOGTO_BACKEND_ENDPOINT: getEnv('LOGTO_BACKEND_ENDPOINT'),
   LOGTO_ISSUER: getEnv('LOGTO_ISSUER'),
   LOGTO_JWKS_URL: getEnvOptional('LOGTO_JWKS_URL', `${getEnv('LOGTO_ENDPOINT')}/oidc/jwks`),
   LOGTO_API_RESOURCE: getEnvOptional('LOGTO_API_RESOURCE', 'https://api.aico.local'),

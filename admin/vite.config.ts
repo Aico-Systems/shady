@@ -42,16 +42,8 @@ function hydrateAdminEnv(mode: string) {
     loadEnvFileIntoProcess(envFile)
   }
 
-  if (!process.env.VITE_BACKEND_URL && process.env.BACKEND_URL) {
-    process.env.VITE_BACKEND_URL = process.env.BACKEND_URL
-  }
-  if (!process.env.VITE_LOGTO_ENDPOINT && process.env.LOGTO_ENDPOINT) {
-    process.env.VITE_LOGTO_ENDPOINT = process.env.LOGTO_ENDPOINT
-  }
-  if (!process.env.VITE_WIDGET_URL && process.env.WIDGET_URL) {
-    process.env.VITE_WIDGET_URL = process.env.WIDGET_URL
-  }
 }
+
 
 function resolveExistingPath(candidates: string[], sentinel: string) {
   return candidates.find((candidate) => existsSync(resolve(candidate, sentinel))) ?? candidates[0]

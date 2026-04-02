@@ -1,41 +1,53 @@
 import {
-  init,
-  addMessages,
-  getLocaleFromNavigator,
+  _,
+  initBlueprintI18n,
   locale,
   locales,
-  _ as t,
-} from 'svelte-i18n';
+  setBlueprintLocale,
+} from '@aico/blueprint';
 
-import en from './locales/en.json';
-import de from './locales/de.json';
+type MessageTree = Record<string, unknown>;
+
+function extractLocaleCodeFromPath(path: string): string | null {
+  const match = path.match(/\/([^/]+)\.json$/);
+  return match?.[1] ?? null;
+}
+
+function loadAppMessages(): Record<string, MessageTree> {
+  const modules = import.meta.glob('./locales/*.json', {
+    eager: true,
+    import: 'default',
+  }) as Record<string, unknown>;
+
+  const messages: Record<string, MessageTree> = {};
+  for (const path of Object.keys(modules)) {
+    const localeCode = extractLocaleCodeFromPath(path);
+    if (!localeCode) continue;
+    const dictionary = modules[path];
+    if (dictionary && typeof dictionary === 'object' && !Array.isArray(dictionary)) {
+      messages[localeCode] = dictionary as MessageTree;
+    }
+  }
+
+  return messages;
+}
 
 let initialized = false;
 
 export function initI18n() {
   if (initialized) return;
 
-  addMessages('en', en);
-  addMessages('de', de);
-
-  const savedLocale =
-    typeof window !== 'undefined' ? localStorage.getItem('aico-admin-locale') : null;
-  const browserLocale = getLocaleFromNavigator();
-  const initialLocale = savedLocale || browserLocale || 'en';
-
-  init({
+  initBlueprintI18n({
     fallbackLocale: 'en',
-    initialLocale,
+    storageKey: 'aico-admin-locale',
+    appMessages: loadAppMessages(),
   });
 
   initialized = true;
 }
 
 export function setLocale(localeCode: string) {
-  locale.set(localeCode);
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('aico-admin-locale', localeCode);
-  }
+  setBlueprintLocale(localeCode);
 }
 
-export { locale, locales, t };
+export { locale, locales, _ as t };

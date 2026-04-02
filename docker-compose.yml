@@ -99,7 +99,7 @@ services:
       dockerfile: Dockerfile
     container_name: shady_widget_embed
     ports:
-      - "${WIDGET_PORT:-5178}:3001"
+      - "${WIDGET_PORT:-5178}:${WIDGET_PORT:-3001}"
     env_file:
       - .env.dev
       - .env.dev.generated

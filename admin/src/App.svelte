@@ -11,6 +11,7 @@
 		defineConfig,
 		initializeNavigation,
 		setNavigationPages,
+		OrganizationSelector,
 		type AppConfig,
 		type PageDefinition,
 	} from "@aico/blueprint";
@@ -216,4 +217,8 @@
 	<title>{$t("app.meta.title")}</title>
 </svelte:head>
 
-<AuthGate pages={pageDefinitions} config={appConfig} {auth} {authStores} t={t} />
+<AuthGate pages={pageDefinitions} config={appConfig} {auth} {authStores} t={t}>
+	{#snippet headerActions()}
+		<OrganizationSelector />
+	{/snippet}
+</AuthGate>
