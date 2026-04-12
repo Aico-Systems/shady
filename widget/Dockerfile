@@ -8,7 +8,7 @@ RUN bun install --frozen-lockfile
 # Copy source
 COPY . .
 
-# Build IIFE widget bundle
+# Build IIFE widget bundle + SPA page
 RUN bun run build
 
 FROM oven/bun:latest

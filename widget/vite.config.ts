@@ -47,16 +47,17 @@ function widgetDevEntrypoint() {
   }
 }
 
+const isSPABuild = process.env.BUILD_TARGET === 'spa'
+
 export default defineConfig(({ command }) => {
-  if (command === 'build') {
+  if (command === 'build' && !isSPABuild) {
+    // Step 1: Build the embeddable IIFE widget bundle (widget.js)
     return {
       envPrefix: 'VITE_',
       plugins: [
-        // Process normal Svelte files (exclude .wc.svelte files)
         svelte({
           exclude: '**/*.wc.svelte'
         }),
-        // Process web component files (only include .wc.svelte files) and compile them as custom elements
         svelte({
           include: '**/*.wc.svelte',
           compilerOptions: {
@@ -74,6 +75,29 @@ export default defineConfig(({ command }) => {
         sourcemap: false,
         outDir: 'dist',
         emptyOutDir: true
+      }
+    }
+  }
+
+  if (command === 'build' && isSPABuild) {
+    // Step 2: Build the SPA page (index.html + assets), keep widget.js from step 1
+    return {
+      envPrefix: 'VITE_',
+      plugins: [
+        svelte({
+          exclude: '**/*.wc.svelte'
+        }),
+        svelte({
+          include: '**/*.wc.svelte',
+          compilerOptions: {
+            customElement: true
+          }
+        })
+      ],
+      build: {
+        sourcemap: false,
+        outDir: 'dist',
+        emptyOutDir: false
       }
     }
   }

@@ -36,6 +36,10 @@
     "deploy": {
       "port": 9090,
       "target": "deploy-webhook"
+    },
+    "qr": {
+      "port": 3001,
+      "target": "shady-widget"
     }
   },
   "env": {
@@ -74,6 +78,7 @@
       "DOMAIN_API": "api.shady.aicoflow.com",
       "DOMAIN_WIDGET": "widget.shady.aicoflow.com",
       "DOMAIN_DEPLOY": "deploy.shady.aicoflow.com",
+      "DOMAIN_QR": "qr.aicoyo.com qr.aicoyo.de qr.aicoyo.at qr.aicoflow.com qr.aicoflow.xyz",
 
       "BACKEND_PORT": 8000,
       "ADMIN_PORT": 3000,
