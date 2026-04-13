@@ -90,7 +90,7 @@
         selectedFlowSlug,
         {
           destination: destination || undefined,
-          userId: userId || undefined,
+          userId: userId || destination || undefined,
           variables,
         },
       );

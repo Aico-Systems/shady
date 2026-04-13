@@ -1,6 +1,11 @@
 // API client for the main AICO backend (flow engine)
-// Uses /dev/api routes which bypass auth — requires X-Dev-Organization-Id header
+// Dev: /dev/api routes (no auth, X-Dev-Organization-Id header)
+// Prod: /api routes with Logto Bearer token (same Logto instance)
+import { auth, currentOrganization } from "@aico/blueprint";
+import { get } from "svelte/store";
 import config from "./config";
+
+const isDev = config.AICO_API_URL.includes("localhost");
 
 export interface AicoFlow {
   id: string;
@@ -33,9 +38,23 @@ async function aicoCall<T>(
   organizationId: string,
   options?: RequestInit,
 ): Promise<T> {
-  const url = `${config.AICO_API_URL}/dev/api${path}`;
+  const prefix = isDev ? "/dev/api" : "/api";
+  const url = `${config.AICO_API_URL}${prefix}${path}`;
   const headers = new Headers(options?.headers);
-  headers.set("X-Dev-Organization-Id", organizationId);
+
+  if (isDev) {
+    headers.set("X-Dev-Organization-Id", organizationId);
+  } else {
+    // Same Logto instance — get token for the AICO API resource
+    const organization = get(currentOrganization);
+    const token = auth.getAccessToken
+      ? await auth.getAccessToken(config.AICO_API_URL, organization?.id)
+      : null;
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
   if (options?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }

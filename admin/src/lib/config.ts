@@ -40,7 +40,6 @@ const WIDGET_URL =
 	readRuntimeValue("VITE_WIDGET_URL") || "http://localhost:5178";
 const AICO_API_URL =
 	readRuntimeValue("VITE_AICO_API_URL") || "http://localhost:5005";
-
 const apiUrl = new URL(API_URL);
 
 const config = {
