@@ -98,7 +98,7 @@
       "VITE_LOGTO_API_RESOURCE": "https://api.shady.aicoflow.com",
       "VITE_WIDGET_URL": "https://widget.shady.aicoflow.com",
       "VITE_WIDGET_DEFAULT_ORG": "aico-global",
-      "VITE_AICO_API_URL": "https://api.aicoflow.com",
+      "VITE_AICO_API_URL": "https://api.aicoflow.xyz",
 
       "BACKEND_URL": "https://api.shady.aicoflow.com",
       "ADMIN_URL": "https://shady.aicoflow.com",
