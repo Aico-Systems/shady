@@ -21,6 +21,7 @@
 	import BookingsPage from "./lib/pages/BookingsPage.svelte";
 	import ConfigPage from "./lib/pages/ConfigPage.svelte";
 	import ContentPage from "./lib/pages/ContentPage.svelte";
+	import FlowTriggerPage from "./lib/pages/FlowTriggerPage.svelte";
 	import { t } from "./i18n";
 
 	initLogtoAuth({
@@ -172,6 +173,14 @@
 					status: "live",
 				},
 			],
+		},
+		{
+			id: "flow-trigger",
+			title: "Flow Trigger",
+			iconName: "phone-outgoing",
+			component: FlowTriggerPage,
+			color: "var(--aico-teal-500)",
+			description: "Trigger outbound calls via the AICO flow engine.",
 		},
 		{
 			id: "config",

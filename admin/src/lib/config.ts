@@ -10,7 +10,8 @@ type RuntimeKey =
 	| "VITE_LOGTO_APP_ID"
 	| "VITE_LOGTO_API_RESOURCE"
 	| "VITE_BACKEND_URL"
-	| "VITE_WIDGET_URL";
+	| "VITE_WIDGET_URL"
+	| "VITE_AICO_API_URL";
 
 function readRuntimeValue(key: RuntimeKey): string | undefined {
 	if (typeof window !== "undefined" && window.__ENV__?.[key]) {
@@ -21,7 +22,7 @@ function readRuntimeValue(key: RuntimeKey): string | undefined {
 	return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function getRequiredConfig(key: Exclude<RuntimeKey, "VITE_LOGTO_ACCOUNT_CENTER_ENDPOINT" | "VITE_WIDGET_URL">): string {
+function getRequiredConfig(key: Exclude<RuntimeKey, "VITE_LOGTO_ACCOUNT_CENTER_ENDPOINT" | "VITE_WIDGET_URL" | "VITE_AICO_API_URL">): string {
 	const value = readRuntimeValue(key);
 	if (!value) {
 		throw new Error(`Required configuration missing: ${key}`);
@@ -37,6 +38,8 @@ const LOGTO_API_RESOURCE = getRequiredConfig("VITE_LOGTO_API_RESOURCE");
 const API_URL = getRequiredConfig("VITE_BACKEND_URL");
 const WIDGET_URL =
 	readRuntimeValue("VITE_WIDGET_URL") || "http://localhost:5178";
+const AICO_API_URL =
+	readRuntimeValue("VITE_AICO_API_URL") || "http://localhost:5005";
 
 const apiUrl = new URL(API_URL);
 
@@ -47,6 +50,7 @@ const config = {
 	LOGTO_API_RESOURCE,
 	API_URL,
 	WIDGET_URL,
+	AICO_API_URL,
 	BACKEND_HOST: apiUrl.hostname,
 	BACKEND_PORT:
 		parseInt(apiUrl.port, 10) || (apiUrl.protocol === "https:" ? 443 : 80),
