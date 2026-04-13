@@ -13,6 +13,7 @@
     FormField,
     Badge,
     StateBlock,
+    currentOrganization,
   } from "@aico/blueprint";
 
   let flows = $state<AicoFlow[]>([]);
@@ -20,7 +21,6 @@
   let triggering = $state(false);
 
   // Form state
-  let organizationId = $state("DEMO");
   let selectedFlowSlug = $state("");
   let destination = $state("");
   let userId = $state("");
@@ -50,7 +50,8 @@
   async function loadFlows() {
     loadingFlows = true;
     try {
-      flows = await aicoFlowsApi.list(organizationId);
+      const orgId = $currentOrganization?.id ?? "";
+      flows = await aicoFlowsApi.list(orgId);
       if (flows.length > 0 && !selectedFlowSlug) {
         selectedFlowSlug = flows[0].slug;
       }
@@ -86,7 +87,7 @@
 
     try {
       const result = await aicoFlowsApi.trigger(
-        organizationId,
+        $currentOrganization?.id ?? "",
         selectedFlowSlug,
         {
           destination: destination || undefined,
@@ -145,27 +146,8 @@
 >
   <div class="trigger-grid">
     <div class="trigger-form">
-      <SectionPanel title="Configuration" icon="settings">
+      <SectionPanel title="Trigger" icon="phone-outgoing">
         <div class="form-stack">
-          <FormField label="Organization ID">
-            <div class="org-row">
-              <input
-                type="text"
-                bind:value={organizationId}
-                placeholder="DEMO"
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                icon="refresh-cw"
-                onclick={loadFlows}
-                loading={loadingFlows}
-              >
-                Reload
-              </Button>
-            </div>
-          </FormField>
-
           <FormField label="Flow" required>
             {#if loadingFlows}
               <select disabled>
@@ -185,11 +167,6 @@
               </select>
             {/if}
           </FormField>
-        </div>
-      </SectionPanel>
-
-      <SectionPanel title="Trigger" icon="phone-outgoing">
-        <div class="form-stack">
           <FormField
             label="Destination"
             help="Phone number or SIP URI to dial"
@@ -355,16 +332,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--blueprint-spacing-md);
-  }
-
-  .org-row {
-    display: flex;
-    gap: var(--blueprint-spacing-sm);
-    align-items: stretch;
-  }
-
-  .org-row input {
-    flex: 1;
   }
 
   .trigger-actions {
