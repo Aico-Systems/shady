@@ -67,6 +67,18 @@ export async function handleCmsPublicRoutes(
       return jsonResponse({ success: true, data: post });
     }
 
+    const legalMatch = path.match(/^\/api\/public\/cms\/legal-pages\/([^/]+)$/);
+    if (legalMatch && method === 'GET') {
+      const locale = url.searchParams.get('locale') || undefined;
+      const page = await cmsService.getPublishedLegalPage(legalMatch[1], locale);
+
+      if (!page) {
+        return errorResponse('Not found', 404);
+      }
+
+      return jsonResponse({ success: true, data: page });
+    }
+
     return errorResponse('Not found', 404);
   } catch (error: any) {
     logger.error('CMS public route error', { error: error.message, path, method });

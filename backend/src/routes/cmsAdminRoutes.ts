@@ -78,6 +78,37 @@ export async function handleCmsAdminRoutes(
       });
     }
 
+    if (path === '/api/admin/cms/legal-pages' && method === 'GET') {
+      return jsonResponse({
+        success: true,
+        data: await cmsService.listLegalPagesAdmin()
+      });
+    }
+
+    if (path === '/api/admin/cms/legal-pages' && method === 'POST') {
+      const body = await request.json();
+      return jsonResponse(
+        { success: true, data: await cmsService.createLegalPage(body, userId) },
+        201
+      );
+    }
+
+    const legalMatch = path.match(/^\/api\/admin\/cms\/legal-pages\/([^/]+)$/);
+    if (legalMatch && method === 'PUT') {
+      const body = await request.json();
+      return jsonResponse({
+        success: true,
+        data: await cmsService.updateLegalPage(legalMatch[1], body, userId)
+      });
+    }
+
+    if (legalMatch && method === 'DELETE') {
+      return jsonResponse({
+        success: true,
+        data: await cmsService.deleteLegalPage(legalMatch[1])
+      });
+    }
+
     return errorResponse('Not found', 404);
   } catch (error: any) {
     logger.error('CMS admin route error', { error: error.message, path, method });

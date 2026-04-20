@@ -230,6 +230,41 @@ export const cmsBlogPosts = pgTable(
 );
 
 // ============================================================================
+// CMS LEGAL PAGES
+// ============================================================================
+
+export const cmsLegalPages = pgTable(
+  'cms_legal_pages',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    pageKey: text('page_key').notNull(), // 'imprint' | 'privacy' | 'terms'
+    locale: text('locale').notNull().default('en'),
+    title: text('title').notNull(),
+    description: text('description').notNull().default(''),
+    eyebrow: text('eyebrow').notNull().default(''),
+    lede: text('lede').notNull().default(''),
+    body: text('body').notNull().default(''),
+    status: text('status').notNull().default('draft'),
+    createdBy: text('created_by'),
+    updatedBy: text('updated_by'),
+    publishedBy: text('published_by'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    publishedAt: timestamp('published_at')
+  },
+  (table) => ({
+    keyLocaleIdx: uniqueIndex('ux_cms_legal_pages_key_locale').on(
+      table.pageKey,
+      table.locale
+    ),
+    statusPublishedIdx: index('idx_cms_legal_pages_status_published').on(
+      table.status,
+      table.publishedAt
+    )
+  })
+);
+
+// ============================================================================
 // RELATIONS (for Drizzle ORM query builder)
 // ============================================================================
 

@@ -165,6 +165,35 @@ export interface CmsMediaUploadResult {
   kind: "image" | "video";
 }
 
+export type CmsLegalPageKey = "imprint" | "privacy" | "terms";
+
+export interface CmsLegalPage {
+  id: string;
+  pageKey: CmsLegalPageKey;
+  locale: string;
+  title: string;
+  description: string;
+  eyebrow: string;
+  lede: string;
+  body: string;
+  status: "draft" | "published";
+  createdAt: string | null;
+  updatedAt: string | null;
+  publishedAt: string | null;
+}
+
+export interface CmsLegalPageInput {
+  pageKey: CmsLegalPageKey;
+  locale: string;
+  title: string;
+  description: string;
+  eyebrow: string;
+  lede: string;
+  body: string;
+  status: "draft" | "published";
+  publishedAt?: string | null;
+}
+
 // Users API
 export const usersApi = {
   list: () => apiCall<OrgMember[]>('/api/admin/users'),
@@ -285,5 +314,24 @@ export const cmsApi = {
       method: 'POST',
       body: formData
     });
-  }
+  },
+
+  listLegalPages: () => apiCall<CmsLegalPage[]>('/api/admin/cms/legal-pages'),
+
+  createLegalPage: (data: CmsLegalPageInput) =>
+    apiCall<CmsLegalPage>('/api/admin/cms/legal-pages', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  updateLegalPage: (id: string, data: CmsLegalPageInput) =>
+    apiCall<CmsLegalPage>(`/api/admin/cms/legal-pages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+
+  deleteLegalPage: (id: string) =>
+    apiCall<CmsLegalPage>(`/api/admin/cms/legal-pages/${id}`, {
+      method: 'DELETE'
+    })
 };

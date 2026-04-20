@@ -1,7 +1,10 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db';
-import { cmsBlogPosts, cmsSiteContent } from '../db/schema';
+import { cmsBlogPosts, cmsLegalPages, cmsSiteContent } from '../db/schema';
+
+const LEGAL_PAGE_KEYS = ['imprint', 'privacy', 'terms'] as const;
+type LegalPageKey = (typeof LEGAL_PAGE_KEYS)[number];
 
 const SITE_CONTENT_KEY = 'landing-site-content';
 
@@ -28,8 +31,21 @@ const blogPostInputSchema = z.object({
   publishedAt: z.string().datetime().nullable().optional()
 });
 
+const legalPageInputSchema = z.object({
+  pageKey: z.enum(LEGAL_PAGE_KEYS),
+  locale: z.string().default('en'),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  eyebrow: z.string().default(''),
+  lede: z.string().default(''),
+  body: z.string().default(''),
+  status: z.enum(['draft', 'published']).default('draft'),
+  publishedAt: z.string().datetime().nullable().optional()
+});
+
 export type LocalizedSiteContent = z.infer<typeof localizedContentSchema>;
 export type CmsBlogPostInput = z.infer<typeof blogPostInputSchema>;
+export type CmsLegalPageInput = z.infer<typeof legalPageInputSchema>;
 
 function normalizeLocale(value: string | null | undefined): string {
   const normalized = (value || 'en').trim().toLowerCase();
@@ -75,6 +91,23 @@ function hasLocalizedContent(value: unknown): boolean {
 
     return Object.keys(localeValue as Record<string, unknown>).length > 0;
   });
+}
+
+function mapLegalPage(row: typeof cmsLegalPages.$inferSelect) {
+  return {
+    id: row.id,
+    pageKey: row.pageKey as LegalPageKey,
+    locale: row.locale,
+    title: row.title,
+    description: row.description,
+    eyebrow: row.eyebrow,
+    lede: row.lede,
+    body: row.body,
+    status: row.status,
+    createdAt: row.createdAt?.toISOString() || null,
+    updatedAt: row.updatedAt?.toISOString() || null,
+    publishedAt: row.publishedAt?.toISOString() || null
+  };
 }
 
 function mapBlogPost(row: typeof cmsBlogPosts.$inferSelect) {
@@ -331,6 +364,143 @@ export class CmsService {
     });
 
     return exact ? mapBlogPost(exact) : null;
+  }
+
+  async listLegalPagesAdmin() {
+    const rows = await db
+      .select()
+      .from(cmsLegalPages)
+      .orderBy(desc(cmsLegalPages.updatedAt), desc(cmsLegalPages.createdAt));
+
+    return rows.map(mapLegalPage);
+  }
+
+  async createLegalPage(input: unknown, userId: string) {
+    const parsed = this.normalizeLegalPageInput(input);
+    const now = new Date();
+    const publishedAt =
+      parsed.status === 'published'
+        ? parsed.publishedAt
+          ? new Date(parsed.publishedAt)
+          : now
+        : null;
+
+    const [row] = await db
+      .insert(cmsLegalPages)
+      .values({
+        pageKey: parsed.pageKey,
+        locale: parsed.locale,
+        title: parsed.title,
+        description: parsed.description,
+        eyebrow: parsed.eyebrow,
+        lede: parsed.lede,
+        body: parsed.body,
+        status: parsed.status,
+        createdBy: userId,
+        updatedBy: userId,
+        publishedBy: parsed.status === 'published' ? userId : null,
+        createdAt: now,
+        updatedAt: now,
+        publishedAt
+      })
+      .returning();
+
+    return mapLegalPage(row);
+  }
+
+  async updateLegalPage(id: string, input: unknown, userId: string) {
+    const existing = await db.query.cmsLegalPages.findFirst({
+      where: eq(cmsLegalPages.id, id)
+    });
+
+    if (!existing) {
+      throw new Error('Legal page not found');
+    }
+
+    const parsed = this.normalizeLegalPageInput(input);
+    const now = new Date();
+    const nextPublishedAt =
+      parsed.status === 'published'
+        ? parsed.publishedAt
+          ? new Date(parsed.publishedAt)
+          : existing.publishedAt || now
+        : null;
+
+    const [row] = await db
+      .update(cmsLegalPages)
+      .set({
+        pageKey: parsed.pageKey,
+        locale: parsed.locale,
+        title: parsed.title,
+        description: parsed.description,
+        eyebrow: parsed.eyebrow,
+        lede: parsed.lede,
+        body: parsed.body,
+        status: parsed.status,
+        updatedBy: userId,
+        updatedAt: now,
+        publishedBy: parsed.status === 'published' ? userId : null,
+        publishedAt: nextPublishedAt
+      })
+      .where(eq(cmsLegalPages.id, id))
+      .returning();
+
+    return mapLegalPage(row);
+  }
+
+  async deleteLegalPage(id: string) {
+    const [row] = await db
+      .delete(cmsLegalPages)
+      .where(eq(cmsLegalPages.id, id))
+      .returning();
+
+    if (!row) {
+      throw new Error('Legal page not found');
+    }
+
+    return mapLegalPage(row);
+  }
+
+  async getPublishedLegalPage(pageKey: string, locale?: string) {
+    if (!LEGAL_PAGE_KEYS.includes(pageKey as LegalPageKey)) {
+      return null;
+    }
+
+    const normalizedLocale = normalizeLocale(locale);
+    const exact = await db.query.cmsLegalPages.findFirst({
+      where: and(
+        eq(cmsLegalPages.status, 'published'),
+        eq(cmsLegalPages.pageKey, pageKey),
+        eq(cmsLegalPages.locale, normalizedLocale)
+      )
+    });
+
+    if (exact) {
+      return mapLegalPage(exact);
+    }
+
+    const fallback = await db.query.cmsLegalPages.findFirst({
+      where: and(
+        eq(cmsLegalPages.status, 'published'),
+        eq(cmsLegalPages.pageKey, pageKey)
+      )
+    });
+
+    return fallback ? mapLegalPage(fallback) : null;
+  }
+
+  private normalizeLegalPageInput(input: unknown): CmsLegalPageInput {
+    const parsed = legalPageInputSchema.parse(input);
+
+    return {
+      ...parsed,
+      locale: normalizeLocale(parsed.locale),
+      title: parsed.title.trim(),
+      description: parsed.description.trim(),
+      eyebrow: parsed.eyebrow.trim(),
+      lede: parsed.lede.trim(),
+      body: parsed.body.trim()
+    };
   }
 
   private normalizeBlogPostInput(input: unknown): CmsBlogPostInput {

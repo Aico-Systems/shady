@@ -115,6 +115,13 @@
 					description: "Draft and publish editorial content from a focused surface.",
 					status: "live",
 				},
+				{
+					id: "legal",
+					title: "Legal Pages",
+					iconName: "scale",
+					description: "Edit Impressum, Datenschutz, and AGB for each locale.",
+					status: "live",
+				},
 			],
 		},
 		{

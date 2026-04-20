@@ -7,6 +7,7 @@
   } from "@aico/blueprint";
   import LandingContentMode from "../components/content/LandingContentMode.svelte";
   import BlogPostsMode from "../components/content/BlogPostsMode.svelte";
+  import LegalPagesMode from "../components/content/LegalPagesMode.svelte";
 
   const CONTENT_MODES = {
     landing: {
@@ -19,12 +20,17 @@
       label: "Blog Posts",
       description: "Manage editorial drafts and published blog entries from a dedicated publishing surface.",
     },
+    legal: {
+      id: "legal",
+      label: "Legal Pages",
+      description: "Edit Impressum, Datenschutz, and AGB for each locale from a unified surface.",
+    },
   } as const;
 
   type ContentMode = keyof typeof CONTENT_MODES;
 
   function isContentMode(value: string | undefined): value is ContentMode {
-    return value === "landing" || value === "blog";
+    return value === "landing" || value === "blog" || value === "legal";
   }
 
   const activeMode = $derived<ContentMode>(
@@ -48,7 +54,9 @@
     />
   {:else if activeMode === "landing"}
     <LandingContentMode />
-  {:else}
+  {:else if activeMode === "blog"}
     <BlogPostsMode />
+  {:else}
+    <LegalPagesMode />
   {/if}
 </PageLayout>
