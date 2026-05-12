@@ -9,8 +9,16 @@
     { code: 'de', label: 'DE' },
   ];
 
-  let currentLocale = $state(get(locale) || 'en');
-  const unsub = locale.subscribe((value) => (currentLocale = value || 'en'));
+  // Normalize de-DE → de so the dropdown reflects what's actually rendered
+  // (the catalog is selected by base language via svelte-i18n's fallback chain).
+  function toBaseLocale(value: string | null | undefined): string {
+    if (!value) return 'en';
+    const base = value.toLowerCase().split('-')[0];
+    return languages.some((l) => l.code === base) ? base : 'en';
+  }
+
+  let currentLocale = $state(toBaseLocale(get(locale)));
+  const unsub = locale.subscribe((value) => (currentLocale = toBaseLocale(value)));
   onDestroy(unsub);
 </script>
 
