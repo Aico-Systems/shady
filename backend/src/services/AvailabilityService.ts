@@ -230,6 +230,9 @@ export class AvailabilityService {
             data: busyTimes,
             expiresAt: now + this.CACHE_TTL_MS
           });
+          this.recordCalendarHealth(user.id, null).catch((err) =>
+            logger.warn('Failed to clear calendar health', { userId: user.id, error: err })
+          );
         } else {
           const message = promiseResult.reason instanceof Error
             ? promiseResult.reason.message
@@ -239,6 +242,9 @@ export class AvailabilityService {
           logger.error('Google Calendar fetch failed for user', { userId: user.id, message });
           errors.push({ userId: user.id, message });
           busyByUser.set(user.id, []);
+          this.recordCalendarHealth(user.id, message).catch((err) =>
+            logger.warn('Failed to record calendar health', { userId: user.id, error: err })
+          );
         }
       }
     }
@@ -612,6 +618,21 @@ export class AvailabilityService {
     const mm = String(parts.month).padStart(2, '0');
     const dd = String(parts.day).padStart(2, '0');
     return `${parts.year}-${mm}-${dd}`;
+  }
+
+  /**
+   * Persist the outcome of a calendar fetch on bookingUsers so the admin UI
+   * can show "calendar OK" / "calendar broken: <reason>" badges without
+   * triggering its own Google API call.
+   */
+  private async recordCalendarHealth(userId: string, errorMessage: string | null): Promise<void> {
+    await db
+      .update(bookingUsers)
+      .set({
+        calendarLastError: errorMessage,
+        calendarLastCheckedAt: new Date()
+      })
+      .where(eq(bookingUsers.id, userId));
   }
 }
 

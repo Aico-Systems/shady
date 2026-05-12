@@ -58,8 +58,31 @@
     return target.localId || target.email;
   }
 
-  function getCalendarLabel(target: OrgMember): string {
-    return target.hasGoogleCalendar ? "Calendar ready" : "Calendar missing";
+  type CalendarBadge = {
+    tone: "positive" | "muted" | "warning" | "critical";
+    label: string;
+    title: string | null;
+  };
+
+  function getCalendarBadge(target: OrgMember): CalendarBadge {
+    const tt = get(t);
+    switch (target.calendarStatus) {
+      case "ok":
+        return { tone: "positive", label: tt("pages.users.google.statusOk"), title: null };
+      case "error":
+        return {
+          tone: "critical",
+          label: tt("pages.users.google.statusError"),
+          title: target.calendarLastError
+            ? `${tt("pages.users.google.lastErrorPrefix")}: ${target.calendarLastError}`
+            : null,
+        };
+      case "unknown":
+        return { tone: "warning", label: tt("pages.users.google.statusUnknown"), title: null };
+      case "not_connected":
+      default:
+        return { tone: "muted", label: tt("pages.users.google.statusNotConnected"), title: null };
+    }
   }
 
   let users = $state<OrgMember[]>([]);
@@ -202,6 +225,22 @@
     }
   }
 
+  async function disconnectGoogle(target: OrgMember) {
+    if (!target.localId) return;
+    const tt = get(t);
+    const ok = window.confirm(
+      tt("pages.users.google.disconnectConfirm").replace("{name}", target.displayName || target.email),
+    );
+    if (!ok) return;
+    try {
+      await usersApi.disconnectGoogle(target.localId);
+      toastService.success(tt("pages.users.notifications.googleDisconnected"));
+      await loadUsers();
+    } catch (error) {
+      toastService.error(tt("pages.users.notifications.disconnectError"));
+    }
+  }
+
   async function loadAvailabilityForUser(target: OrgMember, force = false) {
     const userKey = getUserKey(target);
     selectedAvailabilityUserKey = userKey;
@@ -324,6 +363,7 @@
     <SectionPanel title={activeModeMeta.panelTitle} icon="users-round">
       <div class="team-grid">
         {#each users as bookingUser}
+          {@const cb = getCalendarBadge(bookingUser)}
           <article class="team-card">
             <div class="team-card-top">
               <div class="identity-cell">
@@ -348,11 +388,9 @@
                 size="sm"
                 label={bookingUser.isActive ? "Active" : "Inactive"}
               />
-              <Badge
-                tone={bookingUser.hasGoogleCalendar ? "positive" : "muted"}
-                size="sm"
-                label={getCalendarLabel(bookingUser)}
-              />
+              <span title={cb.title ?? undefined}>
+                <Badge tone={cb.tone} size="sm" label={cb.label} />
+              </span>
               <Badge tone="neutral" size="sm" label={bookingUser.timezone} />
             </div>
 
@@ -367,7 +405,7 @@
                 {$t("pages.users.buttons.availability")}
               </Button>
 
-              {#if !bookingUser.hasGoogleCalendar && $canConnectCalendar}
+              {#if $canConnectCalendar}
                 <Button
                   type="button"
                   variant="ghost"
@@ -375,8 +413,21 @@
                   icon="link-2"
                   onclick={() => connectGoogle(bookingUser)}
                 >
-                  {$t("pages.users.google.connect")}
+                  {bookingUser.hasGoogleCalendar
+                    ? $t("pages.users.google.reconnect")
+                    : $t("pages.users.google.connect")}
                 </Button>
+                {#if bookingUser.hasGoogleCalendar}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    icon="link-2-off"
+                    onclick={() => disconnectGoogle(bookingUser)}
+                  >
+                    {$t("pages.users.google.disconnect")}
+                  </Button>
+                {/if}
               {/if}
             </div>
           </article>
@@ -396,6 +447,7 @@
           </div>
           <div class="user-rail">
             {#each users as bookingUser}
+              {@const cb = getCalendarBadge(bookingUser)}
               <button
                 type="button"
                 class="user-card"
@@ -418,11 +470,9 @@
                 </div>
                 <div class="user-card-meta">
                   <span>{bookingUser.timezone}</span>
-                  <Badge
-                    tone={bookingUser.hasGoogleCalendar ? "positive" : "muted"}
-                    size="sm"
-                    label={getCalendarLabel(bookingUser)}
-                  />
+                  <span title={cb.title ?? undefined}>
+                    <Badge tone={cb.tone} size="sm" label={cb.label} />
+                  </span>
                 </div>
               </button>
             {/each}
@@ -433,15 +483,14 @@
           {#if !selectedAvailabilityUser}
             <StateBlock variant="empty" message="Select a teammate to edit availability." />
           {:else}
+            {@const sb = getCalendarBadge(selectedAvailabilityUser)}
             <div class="availability-header">
               <div class="availability-summary">
                 <span>{selectedAvailabilityUser.email}</span>
                 <Badge tone="neutral" size="sm" label={selectedAvailabilityUser.timezone} />
-                <Badge
-                  tone={selectedAvailabilityUser.hasGoogleCalendar ? "positive" : "warning"}
-                  size="sm"
-                  label={selectedAvailabilityUser.hasGoogleCalendar ? "Google Calendar connected" : "Google Calendar not connected"}
-                />
+                <span title={sb.title ?? undefined}>
+                  <Badge tone={sb.tone} size="sm" label={sb.label} />
+                </span>
               </div>
 
               {#if $canManageAvailability}
@@ -458,11 +507,22 @@
               {/if}
             </div>
 
-            {#if !selectedAvailabilityUser.hasGoogleCalendar && $canConnectCalendar}
+            {#if $canConnectCalendar && (!selectedAvailabilityUser.hasGoogleCalendar || selectedAvailabilityUser.calendarStatus === "error")}
               <div class="availability-callout">
                 <div class="availability-callout-copy">
-                  <strong>Calendar connection required</strong>
-                  <p>Connect Google Calendar before relying on this teammate for live bookings.</p>
+                  <strong>
+                    {selectedAvailabilityUser.calendarStatus === "error"
+                      ? "Calendar connection broken"
+                      : "Calendar connection required"}
+                  </strong>
+                  <p>
+                    {#if selectedAvailabilityUser.calendarStatus === "error"}
+                      Last fetch failed: {selectedAvailabilityUser.calendarLastError}.
+                      Reconnect to restore availability blocking.
+                    {:else}
+                      Connect Google Calendar before relying on this teammate for live bookings.
+                    {/if}
+                  </p>
                 </div>
                 <Button
                   type="button"
@@ -471,7 +531,9 @@
                   icon="link-2"
                   onclick={() => connectGoogle(selectedAvailabilityUser)}
                 >
-                  {$t("pages.users.google.connect")}
+                  {selectedAvailabilityUser.hasGoogleCalendar
+                    ? $t("pages.users.google.reconnect")
+                    : $t("pages.users.google.connect")}
                 </Button>
               </div>
             {/if}

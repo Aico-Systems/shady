@@ -97,6 +97,10 @@ export class GoogleConnectionService {
         googleAccessToken: tokens.access_token || null,
         googleTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
         googleCalendarId: primaryCalendar.id,
+        // Reset health record on successful (re)connect so the UI clears the
+        // old "broken" badge before the next availability fetch runs.
+        calendarLastError: null,
+        calendarLastCheckedAt: null,
         updatedAt: new Date()
       })
       .where(eq(bookingUsers.id, bookingUserId));

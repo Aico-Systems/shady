@@ -77,6 +77,14 @@ export async function handleAdminRoutes(request: Request, url: URL): Promise<Res
       return await handleGoogleConnect(userId, userContext.organizationId);
     }
 
+    // Google Calendar disconnect
+    if (path.match(/^\/api\/admin\/users\/([^\/]+)\/google-disconnect$/) && method === 'POST') {
+      const denied = requireScopes(userContext, [BOOKING_SCOPES.CONNECT_CALENDAR]);
+      if (denied) return denied;
+      const userId = path.match(/^\/api\/admin\/users\/([^\/]+)\/google-disconnect$/)![1];
+      return await handleGoogleDisconnect(userId, userContext.organizationId);
+    }
+
     // Availability management
     const availMatch = path.match(/^\/api\/admin\/users\/([^\/]+)\/availability$/);
     if (availMatch && method === 'GET') {
@@ -163,6 +171,14 @@ async function handleGetUsers(orgId: string): Promise<Response> {
       displayNameUpdates.push({ id: local.id, displayName: logtoName });
     }
 
+    const hasGoogleCalendar = !!local?.googleCalendarId;
+    let calendarStatus: 'not_connected' | 'unknown' | 'ok' | 'error' = 'not_connected';
+    if (hasGoogleCalendar) {
+      if (!local?.calendarLastCheckedAt) calendarStatus = 'unknown';
+      else if (local.calendarLastError) calendarStatus = 'error';
+      else calendarStatus = 'ok';
+    }
+
     return {
       email,
       displayName: logtoName,
@@ -171,7 +187,10 @@ async function handleGetUsers(orgId: string): Promise<Response> {
       // Local state (null if no calendar connection yet)
       localId: local?.id || null,
       isActive: local?.isActive ?? false,
-      hasGoogleCalendar: !!local?.googleCalendarId,
+      hasGoogleCalendar,
+      calendarStatus,
+      calendarLastError: local?.calendarLastError || null,
+      calendarLastCheckedAt: local?.calendarLastCheckedAt || null,
       timezone: local?.timezone || 'UTC',
       createdAt: local?.createdAt || null,
     };
@@ -265,6 +284,21 @@ async function handleGoogleConnect(userId: string, orgId: string): Promise<Respo
   }
   const authUrl = googleCalendarService.generateAuthUrl(userId);
   return jsonResponse({ success: true, data: { authUrl } });
+}
+
+// POST /api/admin/users/:id/google-disconnect
+async function handleGoogleDisconnect(userId: string, orgId: string): Promise<Response> {
+  const user = await requireBookingUserInOrganization(userId, orgId);
+  if (!user) {
+    return errorResponse('User not found', 404);
+  }
+  await googleCalendarService.disconnectCalendar(userId);
+  // Clear stale health record so the UI doesn't keep showing the old error.
+  await db
+    .update(bookingUsers)
+    .set({ calendarLastError: null, calendarLastCheckedAt: null })
+    .where(eq(bookingUsers.id, userId));
+  return jsonResponse({ success: true });
 }
 
 // GET /api/admin/google/callback

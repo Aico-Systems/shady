@@ -79,7 +79,15 @@
       "google": {
         "connected": "Verbunden",
         "disconnected": "Nicht verbunden",
-        "connect": "Kalender verbinden"
+        "connect": "Kalender verbinden",
+        "reconnect": "Kalender neu verbinden",
+        "disconnect": "Kalender trennen",
+        "disconnectConfirm": "Google Kalender für {name} trennen? Bestehende Buchungen behalten ihre Meet-Links, aber neue Verfügbarkeit wird nicht mehr synchronisiert.",
+        "statusOk": "Kalender OK",
+        "statusError": "Kalender fehlerhaft",
+        "statusUnknown": "Kalender nicht geprüft",
+        "statusNotConnected": "Kalender fehlt",
+        "lastErrorPrefix": "Letzter Fehler"
       },
       "buttons": {
         "availability": "Verfügbarkeit",
@@ -115,7 +123,9 @@
         "availabilitySaved": "Verfügbarkeit gespeichert.",
         "userCreated": "Nutzer erfolgreich erstellt.",
         "userCreateError": "Nutzer konnte nicht erstellt werden.",
-        "googleConnected": "Google Kalender erfolgreich verbunden."
+        "googleConnected": "Google Kalender erfolgreich verbunden.",
+        "googleDisconnected": "Google Kalender getrennt.",
+        "disconnectError": "Google Kalender konnte nicht getrennt werden."
       }
     },
     "bookings": {

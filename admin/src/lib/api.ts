@@ -44,6 +44,8 @@ async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // Types — user list merges Logto identity + local calendar state
+export type CalendarStatus = 'not_connected' | 'unknown' | 'ok' | 'error';
+
 export interface OrgMember {
   // From Logto (source of truth)
   email: string;
@@ -54,6 +56,9 @@ export interface OrgMember {
   localId: string | null;
   isActive: boolean;
   hasGoogleCalendar: boolean;
+  calendarStatus: CalendarStatus;
+  calendarLastError: string | null;
+  calendarLastCheckedAt: string | null;
   timezone: string;
   createdAt: string | null;
 }
@@ -216,6 +221,11 @@ export const usersApi = {
 
   connectGoogle: (id: string) =>
     apiCall<{ authUrl: string }>(`/api/admin/users/${id}/google-connect`, {
+      method: 'POST'
+    }),
+
+  disconnectGoogle: (id: string) =>
+    apiCall<unknown>(`/api/admin/users/${id}/google-disconnect`, {
       method: 'POST'
     })
 };

@@ -48,6 +48,10 @@ export const bookingUsers = pgTable(
     googleRefreshToken: text('google_refresh_token'),
     googleAccessToken: text('google_access_token'),
     googleTokenExpiry: timestamp('google_token_expiry'),
+    // Last calendar fetch outcome — populated by AvailabilityService on every
+    // batch fetch. NULL error_message means last fetch succeeded (or never ran).
+    calendarLastError: text('calendar_last_error'),
+    calendarLastCheckedAt: timestamp('calendar_last_checked_at'),
     isActive: boolean('is_active').default(true),
     timezone: text('timezone').default('UTC'),
     createdAt: timestamp('created_at').defaultNow(),
