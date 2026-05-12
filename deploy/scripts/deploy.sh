@@ -173,32 +173,17 @@ start_infrastructure() {
 }
 
 migrate_database() {
-    log_info "Migrating database schema..."
+    log_info "Ensuring required PostgreSQL extensions..."
 
     local DB_USER=${POSTGRES_USER}
     local DB_NAME=${POSTGRES_DB}
 
-    log_info "Ensuring required PostgreSQL extensions..."
     dc exec -T shady-db psql -U "$DB_USER" -d "$DB_NAME" \
         -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"; CREATE EXTENSION IF NOT EXISTS \"vector\";" || exit 1
 
-    log_info "Pushing schema from Drizzle (non-interactive)..."
-    set +e
-    printf '\n' | timeout 600 docker compose -p shady -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
-        run --rm -T shady-backend sh -c "cd /app && bunx drizzle-kit push --force"
-    local status=$?
-    set -e
-
-    if [ "$status" -ne 0 ]; then
-        if [ "$status" -eq 124 ]; then
-            log_error "Drizzle schema push timed out after 10 minutes"
-        else
-            log_error "Drizzle schema push failed with exit code $status"
-        fi
-        exit 1
-    fi
-
-    log_info "Database schema migration complete"
+    # Schema push is run inside the backend container's start.sh (drizzle-kit push --force).
+    # Doing it here too was redundant and added a second 10-minute timeout window.
+    log_info "Schema push deferred to backend container startup"
 }
 
 deploy_services() {

@@ -15,6 +15,16 @@ export interface TimeSlot {
   userEmail: string;
 }
 
+export interface CalendarFetchError {
+  userId: string;
+  message: string;
+}
+
+export interface AvailabilityResult {
+  slots: TimeSlot[];
+  calendarErrors: CalendarFetchError[];
+}
+
 export interface AvailabilityOptions {
   organizationId: string;
   startDate: Date;
@@ -22,57 +32,43 @@ export interface AvailabilityOptions {
   durationMinutes?: number;
 }
 
-/**
- * Simple in-memory cache for Google Calendar events
- * Reduces API calls when multiple availability checks happen in quick succession
- */
+interface ZonedDateParts {
+  year: number;
+  month: number; // 1..12
+  day: number;
+  dayOfWeek: number; // 0=Sun..6=Sat
+}
+
 interface CacheEntry {
   data: Array<{ start: Date; end: Date }>;
   expiresAt: number;
 }
 
+type BookingUser = typeof bookingUsers.$inferSelect;
+
 export class AvailabilityService {
   private googleCalendarCache = new Map<string, CacheEntry>();
-  private readonly CACHE_TTL_MS = 60 * 1000; // 1 minute cache
+  private readonly CACHE_TTL_MS = 60 * 1000;
 
   constructor() {
-    // Periodically clean up expired cache entries to prevent memory leak
     setInterval(() => {
       const now = Date.now();
-      let cleanedCount = 0;
-      
       for (const [key, entry] of this.googleCalendarCache.entries()) {
-        if (entry.expiresAt <= now) {
-          this.googleCalendarCache.delete(key);
-          cleanedCount++;
-        }
+        if (entry.expiresAt <= now) this.googleCalendarCache.delete(key);
       }
-      
-      if (cleanedCount > 0) {
-        logger.debug('Cleaned up expired cache entries', { 
-          cleanedCount, 
-          remainingCount: this.googleCalendarCache.size 
-        });
-      }
-    }, 5 * 60 * 1000); // Clean every 5 minutes
+    }, 5 * 60 * 1000);
   }
-  /**
-   * Get all available time slots across all users in an organization
-   * 
-   * HIGHLY OPTIMIZED for thousands of users:
-   * - Single query for all users
-   * - Single query for all availability rules
-   * - Single query for all bookings
-   * - Batch Google Calendar API calls (with caching)
-   * - In-memory filtering using efficient data structures
-   * 
-   * Complexity: O(n) instead of O(n²) where n = users
-   */
-  async getAvailableSlots(options: AvailabilityOptions): Promise<TimeSlot[]> {
-    const { organizationId, startDate, endDate, durationMinutes } = options;
-    const startTime = Date.now();
 
-    // Get booking duration from config
+  /**
+   * Get all available time slots across all users in an organization,
+   * plus a list of users whose Google Calendar fetch failed (so callers
+   * can surface "broken calendar connection" instead of silently treating
+   * the user as fully free).
+   */
+  async getAvailableSlots(options: AvailabilityOptions): Promise<AvailabilityResult> {
+    const { organizationId, startDate, endDate, durationMinutes } = options;
+    const startTimeMs = Date.now();
+
     const orgConfig = await db.query.bookingConfigs.findFirst({
       where: eq(bookingConfigs.organizationId, organizationId)
     });
@@ -80,7 +76,6 @@ export class AvailabilityService {
     const duration = durationMinutes || orgConfig?.bookingDurationMinutes || config.DEFAULT_BOOKING_DURATION_MINUTES;
     const bufferMinutes = orgConfig?.bufferMinutes || 0;
 
-    // QUERY 1: Get all active booking users for the organization
     const users = await db.query.bookingUsers.findMany({
       where: and(
         eq(bookingUsers.organizationId, organizationId),
@@ -90,21 +85,11 @@ export class AvailabilityService {
 
     if (users.length === 0) {
       logger.warn('No active booking users found', { organizationId });
-      return [];
+      return { slots: [], calendarErrors: [] };
     }
 
     const userIds = users.map(u => u.id);
-    const userMap = new Map(users.map(u => [u.id, u]));
 
-    logger.debug('Calculating availability', {
-      organizationId,
-      userCount: users.length,
-      duration,
-      bufferMinutes,
-      dateRange: { start: startDate.toISOString(), end: endDate.toISOString() }
-    });
-
-    // QUERY 2: Get ALL availability rules for all users in ONE batch query
     const allRules = await db.query.availabilityRules.findMany({
       where: and(
         inArray(availabilityRules.bookingUserId, userIds),
@@ -112,16 +97,12 @@ export class AvailabilityService {
       )
     });
 
-    // Group rules by user
     const rulesByUser = new Map<string, typeof availabilityRules.$inferSelect[]>();
     for (const rule of allRules) {
-      if (!rulesByUser.has(rule.bookingUserId)) {
-        rulesByUser.set(rule.bookingUserId, []);
-      }
+      if (!rulesByUser.has(rule.bookingUserId)) rulesByUser.set(rule.bookingUserId, []);
       rulesByUser.get(rule.bookingUserId)!.push(rule);
     }
 
-    // QUERY 3: Get ALL bookings for all users in ONE batch query
     const allBookings = await db.query.bookings.findMany({
       where: and(
         inArray(bookings.bookingUserId, userIds),
@@ -131,503 +112,258 @@ export class AvailabilityService {
       )
     });
 
-    // Group bookings by user
     const bookingsByUser = new Map<string, typeof bookings.$inferSelect[]>();
     for (const booking of allBookings) {
-      if (!bookingsByUser.has(booking.bookingUserId)) {
-        bookingsByUser.set(booking.bookingUserId, []);
-      }
+      if (!bookingsByUser.has(booking.bookingUserId)) bookingsByUser.set(booking.bookingUserId, []);
       bookingsByUser.get(booking.bookingUserId)!.push(booking);
     }
 
-    // Fetch Google Calendar busy times for all users with calendar integration.
-    // We use each user's own OAuth connection here because cross-account free/busy
-    // aggregation is not reliable with a single user's delegated token.
     const usersWithCalendar = users.filter(u => u.googleCalendarId && u.googleRefreshToken);
-    const googleEventsByUser = await this.batchFetchGoogleCalendarBusyTimes(
+    const { busyByUser, errors } = await this.batchFetchGoogleCalendarBusyTimes(
       usersWithCalendar,
       startDate,
       endDate
     );
 
-    // Generate slots for each user in parallel (in-memory operations only)
-    const allSlotsPromises = users.map(async (user) => {
-      try {
-        const userRules = rulesByUser.get(user.id) || [];
-        if (userRules.length === 0) {
-          return [];
-        }
+    const allSlots = users.flatMap(user => {
+      const userRules = rulesByUser.get(user.id) || [];
+      if (userRules.length === 0) return [];
 
-        // Generate potential slots from rules
-        const potentialSlots = this.generateSlotsFromRules(userRules, startDate, endDate, duration);
+      const tz = user.timezone || 'UTC';
+      const potentialSlots = this.generateSlotsFromRules(userRules, startDate, endDate, duration, tz);
+      if (potentialSlots.length === 0) return [];
 
-        if (potentialSlots.length === 0) {
-          return [];
-        }
+      const userBookings = bookingsByUser.get(user.id) || [];
+      const googleEvents = busyByUser.get(user.id) || [];
+      const busyTimes = [
+        ...userBookings.map(b => ({ start: b.startTime, end: b.endTime })),
+        ...googleEvents
+      ];
 
-        // Combine busy times from bookings and Google Calendar
-        const userBookings = bookingsByUser.get(user.id) || [];
-        const googleEvents = googleEventsByUser.get(user.id) || [];
-
-        const busyTimes = [
-          ...userBookings.map(b => ({ start: b.startTime, end: b.endTime })),
-          ...googleEvents
-        ];
-
-        // Filter out slots that conflict with busy times (with buffer)
-        const availableSlots = potentialSlots.filter(slot => {
+      return potentialSlots
+        .filter(slot => {
           const slotStart = new Date(slot.startTime.getTime() - bufferMinutes * 60000);
           const slotEnd = new Date(slot.endTime.getTime() + bufferMinutes * 60000);
-          
           return !busyTimes.some(busy => this.timesOverlap(slotStart, slotEnd, busy.start, busy.end));
-        });
-
-        // Add user info to slots
-        return availableSlots.map(slot => ({
+        })
+        .map(slot => ({
           ...slot,
           userId: user.id,
           userName: user.displayName,
           userEmail: user.email
         }));
-      } catch (error) {
-        logger.error('Failed to calculate availability for user', {
-          userId: user.id,
-          error
-        });
-        return [];
-      }
     });
 
-    const allSlots = await Promise.all(allSlotsPromises);
+    allSlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-    // Flatten and sort all slots
-    const flattenedSlots = allSlots.flat();
-    flattenedSlots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-
-    const elapsed = Date.now() - startTime;
     logger.debug('Availability calculated', {
       organizationId,
       userCount: users.length,
       ruleCount: allRules.length,
       bookingCount: allBookings.length,
       googleCalendarUsers: usersWithCalendar.length,
-      totalSlots: flattenedSlots.length,
-      elapsedMs: elapsed
+      calendarErrors: errors.length,
+      totalSlots: allSlots.length,
+      elapsedMs: Date.now() - startTimeMs
     });
 
-    return flattenedSlots;
+    return { slots: allSlots, calendarErrors: errors };
   }
 
   /**
-   * Get a list of dates that have at least one available slot
-   * This is optimized for calendar display to grey out unavailable days
-   * 
-   * @param options - Organization ID and date range
-   * @returns Array of date strings (YYYY-MM-DD) that have availability
-   */
-  async getAvailableDates(options: AvailabilityOptions): Promise<string[]> {
-    const slots = await this.getAvailableSlots(options);
-    
-    // Extract unique dates from all available slots
-    const dateSet = new Set<string>();
-    
-    for (const slot of slots) {
-      // Format date as YYYY-MM-DD in UTC
-      const dateStr = slot.startTime.toISOString().split('T')[0];
-      dateSet.add(dateStr);
-    }
-    
-    // Convert to sorted array
-    const dates = Array.from(dateSet).sort();
-    
-    logger.debug('Available dates calculated', {
-      organizationId: options.organizationId,
-      dateCount: dates.length,
-      dateRange: { start: options.startDate.toISOString(), end: options.endDate.toISOString() }
-    });
-    
-    return dates;
-  }
-
-  /**
-   * Calculate available slots for a single user within a date range
-   * 
-   * This method:
-   * 1. Fetches user's availability rules (e.g., Mon-Fri 9AM-5PM)
-   * 2. Retrieves existing bookings and Google Calendar events
-   * 3. Generates potential time slots from rules
-   * 4. Filters out slots that conflict with busy times
-   * 
-   * @param userId - The booking user ID
-   * @param startDate - Start of the date range (UTC)
-   * @param endDate - End of the date range (UTC)
-   * @param durationMinutes - Duration of each slot in minutes
-   * @param bufferMinutes - Buffer time before/after bookings
-   */
-  private async calculateUserAvailability(
-    userId: string,
-    startDate: Date,
-    endDate: Date,
-    durationMinutes: number,
-    bufferMinutes: number
-  ): Promise<Omit<TimeSlot, 'userId' | 'userName' | 'userEmail'>[]> {
-    // Get user's availability rules
-    const rules = await db.query.availabilityRules.findMany({
-      where: and(
-        eq(availabilityRules.bookingUserId, userId),
-        eq(availabilityRules.isActive, true)
-      )
-    });
-
-    if (rules.length === 0) {
-      return [];
-    }
-
-    // Fetch existing bookings that overlap with the date range
-    // Using proper overlap detection: booking.end > range.start AND booking.start < range.end
-    const existingBookings = await db.query.bookings.findMany({
-      where: and(
-        eq(bookings.bookingUserId, userId),
-        eq(bookings.status, 'confirmed'),
-        gt(bookings.endTime, startDate),
-        lt(bookings.startTime, endDate)
-      )
-    });
-
-    // Fetch Google Calendar events (busy times) - only timed events that block availability
-    const googleEvents = await this.fetchGoogleCalendarBusyTimes(userId, startDate, endDate);
-
-    // Combine all busy times from bookings and calendar events
-    const busyTimes = [
-      ...existingBookings.map(b => ({ start: b.startTime, end: b.endTime })),
-      ...googleEvents
-    ];
-
-    // Generate potential slots based on availability rules
-    const potentialSlots = this.generateSlotsFromRules(rules, startDate, endDate, durationMinutes);
-
-    // Filter out slots that conflict with busy times (with buffer)
-    const availableSlots = potentialSlots.filter(slot => {
-      const slotStart = new Date(slot.startTime.getTime() - bufferMinutes * 60000);
-      const slotEnd = new Date(slot.endTime.getTime() + bufferMinutes * 60000);
-      
-      return !busyTimes.some(busy => this.timesOverlap(slotStart, slotEnd, busy.start, busy.end));
-    });
-
-    return availableSlots;
-  }
-
-  /**
-   * Batch fetch Google Calendar busy times for multiple users
-   * This uses individual events.list calls per user under each user's own OAuth token.
-   *
-   * Features:
-   * - In-memory caching with TTL to reduce API calls
-   * - Concurrency control to avoid rate limits
-   * - Graceful error handling per user
-   * - Filters out non-blocking events (all-day, cancelled, transparent)
+   * Batch fetch Google Calendar busy times for multiple users.
+   * Returns both the busy-time map and any per-user errors so callers can
+   * surface broken calendar connections (instead of silently showing the
+   * user as fully free).
    */
   private async batchFetchGoogleCalendarBusyTimes(
-    users: Array<{ id: string; googleCalendarId: string | null; googleRefreshToken: string | null }>,
+    users: BookingUser[],
     startDate: Date,
     endDate: Date
-  ): Promise<Map<string, Array<{ start: Date; end: Date }>>> {
-    const result = new Map<string, Array<{ start: Date; end: Date }>>();
-    
-    if (users.length === 0) {
-      return result;
-    }
+  ): Promise<{
+    busyByUser: Map<string, Array<{ start: Date; end: Date }>>;
+    errors: CalendarFetchError[];
+  }> {
+    const busyByUser = new Map<string, Array<{ start: Date; end: Date }>>();
+    const errors: CalendarFetchError[] = [];
+    if (users.length === 0) return { busyByUser, errors };
 
     const now = Date.now();
-    const usersToFetch: typeof users = [];
-    let cacheHits = 0;
+    const usersToFetch: BookingUser[] = [];
 
-    // Check cache first
     for (const user of users) {
       const cacheKey = `${user.id}:${startDate.toISOString()}:${endDate.toISOString()}`;
       const cached = this.googleCalendarCache.get(cacheKey);
-
       if (cached && cached.expiresAt > now) {
-        result.set(user.id, cached.data);
-        cacheHits++;
+        busyByUser.set(user.id, cached.data);
       } else {
-        // Clean up expired cache entry
-        if (cached) {
-          this.googleCalendarCache.delete(cacheKey);
-        }
+        if (cached) this.googleCalendarCache.delete(cacheKey);
         usersToFetch.push(user);
       }
     }
 
     if (usersToFetch.length === 0) {
-      logger.debug('All Google Calendar events served from cache', { 
-        userCount: users.length 
-      });
-      return result;
+      return { busyByUser, errors };
     }
 
-    // Batch fetch with concurrency control to avoid rate limits
     const CONCURRENT_REQUESTS = 10;
-    const chunks: typeof usersToFetch[] = [];
-    
     for (let i = 0; i < usersToFetch.length; i += CONCURRENT_REQUESTS) {
-      chunks.push(usersToFetch.slice(i, i + CONCURRENT_REQUESTS));
-    }
+      const chunk = usersToFetch.slice(i, i + CONCURRENT_REQUESTS);
 
-    for (const chunk of chunks) {
-      const promises = chunk.map(async (user) => {
-        try {
+      const results = await Promise.allSettled(
+        chunk.map(async (user) => {
+          const tz = user.timezone || 'UTC';
           const events = await googleCalendarService.getCalendarEvents(user.id, startDate, endDate);
-          
-          const busyTimes = events
-            .filter(event => {
-              // Only include timed events (not all-day)
-              if (!event.start?.dateTime || !event.end?.dateTime) return false;
-              // Skip cancelled events
-              if (event.status === 'cancelled') return false;
-              // Skip transparent/free-time events
-              if (event.transparency === 'transparent') return false;
-              return true;
-            })
-            .map(event => ({
-              start: new Date(event.start!.dateTime!),
-              end: new Date(event.end!.dateTime!)
-            }));
-
-          return { userId: user.id, busyTimes, error: null };
-        } catch (error) {
-          logger.warn('Failed to fetch Google Calendar events for user', { 
-            userId: user.id, 
-            error: error instanceof Error ? error.message : String(error)
-          });
-          return { userId: user.id, busyTimes: [], error };
-        }
-      });
-
-      const results = await Promise.allSettled(promises);
-      
-      for (const promiseResult of results) {
-        if (promiseResult.status === 'fulfilled') {
-          const { userId, busyTimes, error } = promiseResult.value;
-          result.set(userId, busyTimes);
-
-          // Cache successful results
-          if (!error) {
-            const cacheKey = `${userId}:${startDate.toISOString()}:${endDate.toISOString()}`;
-            this.googleCalendarCache.set(cacheKey, {
-              data: busyTimes,
-              expiresAt: now + this.CACHE_TTL_MS
-            });
-          }
-        }
-      }
-    }
-
-    logger.debug('Batch fetched Google Calendar events', {
-      totalUsers: users.length,
-      cacheHits,
-      apiFetches: usersToFetch.length,
-      successCount: result.size
-    });
-
-    return result;
-  }
-
-  /**
-   * Fetch busy times from Google Calendar for a user
-   * Filters out all-day events, cancelled events, and transparent (free-time) events
-   * 
-   * NOTE: This is kept for backward compatibility and single-user scenarios
-   * For multiple users, use batchFetchGoogleCalendarBusyTimes instead
-   */
-  private async fetchGoogleCalendarBusyTimes(
-    userId: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<{ start: Date; end: Date }[]> {
-    try {
-      const user = await db.query.bookingUsers.findFirst({
-        where: eq(bookingUsers.id, userId)
-      });
-
-      if (!user?.googleCalendarId) {
-        return [];
-      }
-
-      const events = await googleCalendarService.getCalendarEvents(userId, startDate, endDate);
-      
-      return events
-        .filter(event => {
-          // Only include timed events (not all-day)
-          if (!event.start?.dateTime || !event.end?.dateTime) return false;
-          // Skip cancelled events
-          if (event.status === 'cancelled') return false;
-          // Skip transparent/free-time events
-          if (event.transparency === 'transparent') return false;
-          return true;
+          const busyTimes = this.eventsToBusyTimes(events, tz);
+          return { userId: user.id, busyTimes };
         })
-        .map(event => ({
-          start: new Date(event.start!.dateTime!),
-          end: new Date(event.end!.dateTime!)
-        }));
-    } catch (error) {
-      logger.warn('Failed to fetch Google Calendar events', { userId, error });
-      return [];
+      );
+
+      for (let j = 0; j < results.length; j++) {
+        const promiseResult = results[j];
+        const user = chunk[j];
+        if (promiseResult.status === 'fulfilled') {
+          const { userId, busyTimes } = promiseResult.value;
+          busyByUser.set(userId, busyTimes);
+          const cacheKey = `${userId}:${startDate.toISOString()}:${endDate.toISOString()}`;
+          this.googleCalendarCache.set(cacheKey, {
+            data: busyTimes,
+            expiresAt: now + this.CACHE_TTL_MS
+          });
+        } else {
+          const message = promiseResult.reason instanceof Error
+            ? promiseResult.reason.message
+            : String(promiseResult.reason);
+          // Error level: silent failures here cause "always fully available" UX;
+          // operators need to see this in logs.
+          logger.error('Google Calendar fetch failed for user', { userId: user.id, message });
+          errors.push({ userId: user.id, message });
+          busyByUser.set(user.id, []);
+        }
+      }
     }
+
+    return { busyByUser, errors };
   }
 
   /**
-   * Generate time slots based on availability rules
+   * Convert Google Calendar events into busy time ranges.
+   * Includes all-day events (Out-of-Office, vacation) — these are anchored
+   * to the user's timezone for the start/end-of-day boundaries.
+   */
+  private eventsToBusyTimes(
+    events: Awaited<ReturnType<typeof googleCalendarService.getCalendarEvents>>,
+    tz: string
+  ): Array<{ start: Date; end: Date }> {
+    const out: Array<{ start: Date; end: Date }> = [];
+    for (const event of events) {
+      if (event.status === 'cancelled') continue;
+      if (event.transparency === 'transparent') continue;
+
+      const startDateTime = event.start?.dateTime;
+      const endDateTime = event.end?.dateTime;
+      if (startDateTime && endDateTime) {
+        out.push({ start: new Date(startDateTime), end: new Date(endDateTime) });
+        continue;
+      }
+
+      const startDate = event.start?.date;
+      const endDate = event.end?.date;
+      if (startDate && endDate) {
+        // Google's all-day end.date is exclusive (next-day midnight).
+        const [sy, sm, sd] = startDate.split('-').map(Number);
+        const [ey, em, ed] = endDate.split('-').map(Number);
+        out.push({
+          start: this.zonedTimeToUtc(sy, sm, sd, 0, 0, tz),
+          end: this.zonedTimeToUtc(ey, em, ed, 0, 0, tz)
+        });
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Generate potential time slots from availability rules, anchored in the
+   * user's timezone. A rule "Mon 09:00-17:00" with tz=Europe/Berlin produces
+   * slots at 09:00 Berlin local, not 09:00 UTC.
    */
   private generateSlotsFromRules(
     rules: typeof availabilityRules.$inferSelect[],
-    startDate: Date,
-    endDate: Date,
-    durationMinutes: number
+    rangeStart: Date,
+    rangeEnd: Date,
+    durationMinutes: number,
+    timezone: string
   ): Omit<TimeSlot, 'userId' | 'userName' | 'userEmail'>[] {
-    const slots: Omit<TimeSlot, 'userId' | 'userName' | 'userEmail'>[] = [];
-
-    // Group rules by day of week
-    const rulesByDay = new Map<number, typeof availabilityRules.$inferSelect[]>();
+    const rulesByDow = new Map<number, typeof rules>();
     for (const rule of rules) {
-      if (!rulesByDay.has(rule.dayOfWeek)) {
-        rulesByDay.set(rule.dayOfWeek, []);
-      }
-      rulesByDay.get(rule.dayOfWeek)!.push(rule);
+      if (!rulesByDow.has(rule.dayOfWeek)) rulesByDow.set(rule.dayOfWeek, []);
+      rulesByDow.get(rule.dayOfWeek)!.push(rule);
     }
 
-    // Iterate through each day in the range
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getDay();
-      const dayRules = rulesByDay.get(dayOfWeek);
+    const slots: Omit<TimeSlot, 'userId' | 'userName' | 'userEmail'>[] = [];
+    const nowMs = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const seenLocalDates = new Set<string>();
 
-      if (dayRules && dayRules.length > 0) {
-        // Generate slots for each rule on this day
-        for (const rule of dayRules) {
-          const daySlots = this.generateSlotsForDay(
-            currentDate,
-            rule.startTime,
-            rule.endTime,
-            durationMinutes
-          );
-          slots.push(...daySlots);
+    // Probe one day before/after to catch boundary cases where the user-local
+    // calendar day overlaps the UTC range only at its edges.
+    for (let t = rangeStart.getTime() - dayMs; t <= rangeEnd.getTime() + dayMs; t += dayMs) {
+      const parts = this.getZonedDateParts(new Date(t), timezone);
+      const key = `${parts.year}-${parts.month}-${parts.day}`;
+      if (seenLocalDates.has(key)) continue;
+      seenLocalDates.add(key);
+
+      const dayRules = rulesByDow.get(parts.dayOfWeek);
+      if (!dayRules) continue;
+
+      for (const rule of dayRules) {
+        const [startHour, startMinute] = rule.startTime.split(':').map(Number);
+        const [endHour, endMinute] = rule.endTime.split(':').map(Number);
+
+        const dayStart = this.zonedTimeToUtc(parts.year, parts.month, parts.day, startHour, startMinute, timezone);
+        const dayEnd = this.zonedTimeToUtc(parts.year, parts.month, parts.day, endHour, endMinute, timezone);
+
+        let cur = dayStart.getTime();
+        const stepMs = durationMinutes * 60000;
+        while (cur + stepMs <= dayEnd.getTime()) {
+          const slotStart = new Date(cur);
+          const slotEnd = new Date(cur + stepMs);
+          if (
+            slotStart.getTime() >= rangeStart.getTime() &&
+            slotStart.getTime() <= rangeEnd.getTime() &&
+            slotStart.getTime() > nowMs + 60000
+          ) {
+            slots.push({ startTime: slotStart, endTime: slotEnd });
+          }
+          cur += stepMs;
         }
       }
-
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return slots;
   }
 
-  /**
-   * Generate time slots for a specific day
-   * All times are handled in UTC
-   */
-  private generateSlotsForDay(
-    date: Date,
-    startTime: string,
-    endTime: string,
-    durationMinutes: number
-  ): Omit<TimeSlot, 'userId' | 'userName' | 'userEmail'>[] {
-    const slots: Omit<TimeSlot, 'userId' | 'userName' | 'userEmail'>[] = [];
-
-    // Parse start and end times (format: "HH:mm")
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-
-    // Create start datetime in UTC
-    const slotStart = new Date(Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate(),
-      startHour,
-      startMinute,
-      0,
-      0
-    ));
-
-    // Create end datetime in UTC
-    const dayEnd = new Date(Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate(),
-      endHour,
-      endMinute,
-      0,
-      0
-    ));
-
-    const now = new Date();
-
-    // Generate slots
-    while (slotStart.getTime() + durationMinutes * 60000 <= dayEnd.getTime()) {
-      const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-
-      // Only include future slots (don't allow booking in the past)
-      // Add a small buffer (1 minute) to avoid edge cases
-      if (slotStart.getTime() > now.getTime() + 60000) {
-        slots.push({
-          startTime: new Date(slotStart),
-          endTime: new Date(slotEnd)
-        });
-      }
-
-      // Move to next slot (no gap between slots for now)
-      slotStart.setTime(slotStart.getTime() + durationMinutes * 60000);
-    }
-
-    return slots;
-  }
-
-  /**
-   * Check if two time ranges overlap
-   * Returns true if there's any overlap between the two time ranges
-   * 
-   * Logic: Range1 overlaps Range2 if:
-   * - Range1 starts before Range2 ends AND
-   * - Range1 ends after Range2 starts
-   */
-  private timesOverlap(
-    start1: Date,
-    end1: Date,
-    start2: Date,
-    end2: Date
-  ): boolean {
+  private timesOverlap(start1: Date, end1: Date, start2: Date, end2: Date): boolean {
     return start1 < end2 && end1 > start2;
   }
 
   /**
-   * Get dates that have at least one available slot
-   * This is used by the calendar to grey out unavailable days
-   * 
-   * HIGHLY OPTIMIZED for thousands of users:
-   * 1. Single query to get all users
-   * 2. Single query to get all availability rules for those users
-   * 3. Generate candidate dates based on days of week that have rules
-   * 4. Single query to get all bookings for the date range
-   * 5. Fast in-memory filtering using maps
-   * 
-   * Complexity: O(users + rules + bookings + days) instead of O(users * days * bookings)
-   * 
-   * @param options - Availability options
-   * @returns Array of dates (as ISO strings YYYY-MM-DD) that have availability
+   * Get dates that have at least one available slot. Used by the calendar
+   * to grey out unavailable days. Heuristic — counts DB bookings vs rule
+   * capacity per day. Does NOT consult Google Calendar (that's a TODO),
+   * so a fully-Google-blocked day may still appear available here and only
+   * reveal as empty when the visitor selects it.
    */
   async getAvailableDays(options: AvailabilityOptions): Promise<string[]> {
     const { organizationId, startDate, endDate, durationMinutes } = options;
+    const startTimeMs = Date.now();
 
-    const startTime = Date.now();
-
-    // Get booking duration from config
     const orgConfig = await db.query.bookingConfigs.findFirst({
       where: eq(bookingConfigs.organizationId, organizationId)
     });
 
     const duration = durationMinutes || orgConfig?.bookingDurationMinutes || config.DEFAULT_BOOKING_DURATION_MINUTES;
 
-    // QUERY 1: Get all active booking users for the organization
     const users = await db.query.bookingUsers.findMany({
       where: and(
         eq(bookingUsers.organizationId, organizationId),
@@ -635,14 +371,10 @@ export class AvailabilityService {
       )
     });
 
-    if (users.length === 0) {
-      logger.debug('No active users found', { organizationId });
-      return [];
-    }
-
+    if (users.length === 0) return [];
     const userIds = users.map(u => u.id);
+    const userMap = new Map(users.map(u => [u.id, u]));
 
-    // QUERY 2: Get ALL availability rules for all users in ONE query
     const allRules = await db.query.availabilityRules.findMany({
       where: and(
         inArray(availabilityRules.bookingUserId, userIds),
@@ -650,48 +382,14 @@ export class AvailabilityService {
       )
     });
 
-    if (allRules.length === 0) {
-      logger.debug('No availability rules found', { organizationId });
-      return [];
-    }
+    if (allRules.length === 0) return [];
 
-    // Group rules by user for fast lookup
     const rulesByUser = new Map<string, typeof availabilityRules.$inferSelect[]>();
-    const availableDaysOfWeek = new Set<number>();
-    
     for (const rule of allRules) {
-      if (!rulesByUser.has(rule.bookingUserId)) {
-        rulesByUser.set(rule.bookingUserId, []);
-      }
+      if (!rulesByUser.has(rule.bookingUserId)) rulesByUser.set(rule.bookingUserId, []);
       rulesByUser.get(rule.bookingUserId)!.push(rule);
-      availableDaysOfWeek.add(rule.dayOfWeek);
     }
 
-    // Generate candidate dates based on days of week that have rules
-    const candidateDates: Array<{ dateStr: string; dayOfWeek: number }> = [];
-    const currentDate = new Date(startDate);
-    const now = new Date();
-
-    while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getUTCDay();
-      
-      // Only include dates that:
-      // 1. Have rules for this day of week
-      // 2. Are not in the past
-      if (availableDaysOfWeek.has(dayOfWeek) && currentDate >= now) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        candidateDates.push({ dateStr, dayOfWeek });
-      }
-
-      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-    }
-
-    if (candidateDates.length === 0) {
-      logger.debug('No candidate dates in range', { organizationId, startDate, endDate });
-      return [];
-    }
-
-    // QUERY 3: Batch fetch ALL bookings for the entire range for all users in ONE query
     const allBookings = await db.query.bookings.findMany({
       where: and(
         inArray(bookings.bookingUserId, userIds),
@@ -701,91 +399,87 @@ export class AvailabilityService {
       )
     });
 
-    // Group bookings by user and date for O(1) lookup
-    const bookingsByUserDate = new Map<string, Map<string, typeof bookings.$inferSelect[]>>();
-    for (const booking of allBookings) {
-      const dateStr = booking.startTime.toISOString().split('T')[0];
-      
-      if (!bookingsByUserDate.has(booking.bookingUserId)) {
-        bookingsByUserDate.set(booking.bookingUserId, new Map());
-      }
-      const userBookings = bookingsByUserDate.get(booking.bookingUserId)!;
-      
-      if (!userBookings.has(dateStr)) {
-        userBookings.set(dateStr, []);
-      }
-      userBookings.get(dateStr)!.push(booking);
-    }
-
-    // Pre-calculate potential slots per user per day of week
+    // Pre-compute potential slot count per (user, dayOfWeek)
     const potentialSlotsByUserDow = new Map<string, Map<number, number>>();
     for (const [userId, rules] of rulesByUser) {
       const dowMap = new Map<number, number>();
-      
       for (const rule of rules) {
-        const [startHour, startMinute] = rule.startTime.split(':').map(Number);
-        const [endHour, endMinute] = rule.endTime.split(':').map(Number);
-        
-        const minutesAvailable = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-        const slotsForRule = Math.floor(minutesAvailable / duration);
-        
+        const [sh, sm] = rule.startTime.split(':').map(Number);
+        const [eh, em] = rule.endTime.split(':').map(Number);
+        const minutes = (eh * 60 + em) - (sh * 60 + sm);
+        const slotsForRule = Math.floor(minutes / duration);
         dowMap.set(rule.dayOfWeek, (dowMap.get(rule.dayOfWeek) || 0) + slotsForRule);
       }
-      
       potentialSlotsByUserDow.set(userId, dowMap);
     }
 
-    // Fast filtering: check each candidate date
+    // Bookings indexed by user + user-local date string (YYYY-MM-DD in user TZ).
+    // Indexing in user TZ matches how candidate dates are emitted below.
+    const bookingsByUserDate = new Map<string, Map<string, number>>();
+    for (const booking of allBookings) {
+      const user = userMap.get(booking.bookingUserId);
+      const tz = user?.timezone || 'UTC';
+      const parts = this.getZonedDateParts(booking.startTime, tz);
+      const dateStr = this.formatLocalDate(parts);
+      let userMapForDate = bookingsByUserDate.get(booking.bookingUserId);
+      if (!userMapForDate) {
+        userMapForDate = new Map();
+        bookingsByUserDate.set(booking.bookingUserId, userMapForDate);
+      }
+      userMapForDate.set(dateStr, (userMapForDate.get(dateStr) || 0) + 1);
+    }
+
     const daysWithAvailability = new Set<string>();
+    const nowMs = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
 
-    for (const { dateStr, dayOfWeek } of candidateDates) {
-      // Check if ANY user has availability on this date
-      for (const userId of userIds) {
-        const potentialSlots = potentialSlotsByUserDow.get(userId)?.get(dayOfWeek);
-        if (!potentialSlots || potentialSlots === 0) continue;
+    // Walk per-user calendar days in each user's TZ, emit days where any user
+    // has rule coverage and the heuristic suggests open capacity.
+    for (const user of users) {
+      const tz = user.timezone || 'UTC';
+      const dowMap = potentialSlotsByUserDow.get(user.id);
+      if (!dowMap || dowMap.size === 0) continue;
+      const userBookings = bookingsByUserDate.get(user.id);
+      const seen = new Set<string>();
 
-        const userDateBookings = bookingsByUserDate.get(userId)?.get(dateStr) || [];
-        
-        // Simple heuristic: if bookings < potential slots, there's likely availability
-        // This is conservative and may show some days that are actually fully booked
-        // (when bookings perfectly fill all slots), but it's MUCH faster than
-        // checking exact time ranges
-        if (userDateBookings.length < potentialSlots) {
+      for (let t = startDate.getTime() - dayMs; t <= endDate.getTime() + dayMs; t += dayMs) {
+        const parts = this.getZonedDateParts(new Date(t), tz);
+        const dateStr = this.formatLocalDate(parts);
+        if (seen.has(dateStr)) continue;
+        seen.add(dateStr);
+
+        const potential = dowMap.get(parts.dayOfWeek);
+        if (!potential || potential === 0) continue;
+
+        // Skip days entirely in the past.
+        const dayEndUtc = this.zonedTimeToUtc(parts.year, parts.month, parts.day, 23, 59, tz);
+        if (dayEndUtc.getTime() < nowMs) continue;
+        if (dayEndUtc.getTime() < startDate.getTime() || this.zonedTimeToUtc(parts.year, parts.month, parts.day, 0, 0, tz).getTime() > endDate.getTime()) continue;
+
+        const bookedCount = userBookings?.get(dateStr) || 0;
+        if (bookedCount < potential) {
           daysWithAvailability.add(dateStr);
-          break; // Found availability, move to next date
         }
       }
     }
 
-    const elapsed = Date.now() - startTime;
     logger.debug('Available days calculated', {
       organizationId,
       userCount: users.length,
       ruleCount: allRules.length,
       bookingCount: allBookings.length,
-      candidateDays: candidateDates.length,
       availableDays: daysWithAvailability.size,
-      elapsedMs: elapsed
+      elapsedMs: Date.now() - startTimeMs
     });
 
     return Array.from(daysWithAvailability).sort();
   }
 
   /**
-   * Check if a specific time slot is available for a user
-   * Used during booking creation to validate the slot is still available
-   * 
-   * @param userId - The booking user ID
-   * @param startTime - Slot start time (UTC)
-   * @param endTime - Slot end time (UTC)
-   * @returns true if the slot is available, false if conflicting
+   * Check if a specific time slot is available for a user.
+   * Used during booking creation to validate the slot is still available.
    */
-  async isSlotAvailable(
-    userId: string,
-    startTime: Date,
-    endTime: Date
-  ): Promise<boolean> {
-    // Check for conflicting bookings in database
+  async isSlotAvailable(userId: string, startTime: Date, endTime: Date): Promise<boolean> {
     const conflictingBooking = await db.query.bookings.findFirst({
       where: and(
         eq(bookings.bookingUserId, userId),
@@ -796,42 +490,128 @@ export class AvailabilityService {
     });
 
     if (conflictingBooking) {
-      logger.warn('Slot unavailable - conflicts with existing booking', {
+      logger.warn('Slot unavailable, conflicts with existing booking', {
         userId,
-        bookingId: conflictingBooking.id,
-        conflict: {
-          existing: {
-            start: conflictingBooking.startTime.toISOString(),
-            end: conflictingBooking.endTime.toISOString()
-          },
-          requested: {
-            start: startTime.toISOString(),
-            end: endTime.toISOString()
-          }
-        }
+        bookingId: conflictingBooking.id
       });
       return false;
     }
 
-    // Check for conflicting Google Calendar events
-    const googleBusyTimes = await this.fetchGoogleCalendarBusyTimes(userId, startTime, endTime);
-    
-    const calendarConflict = googleBusyTimes.some(busy => 
-      this.timesOverlap(startTime, endTime, busy.start, busy.end)
-    );
+    const user = await db.query.bookingUsers.findFirst({
+      where: eq(bookingUsers.id, userId)
+    });
+    if (!user || !user.googleCalendarId || !user.googleRefreshToken) {
+      return true;
+    }
 
-    if (calendarConflict) {
-      logger.warn('Slot unavailable - conflicts with Google Calendar event', {
+    try {
+      const events = await googleCalendarService.getCalendarEvents(userId, startTime, endTime);
+      const busyTimes = this.eventsToBusyTimes(events, user.timezone || 'UTC');
+      const calendarConflict = busyTimes.some(busy =>
+        this.timesOverlap(startTime, endTime, busy.start, busy.end)
+      );
+      if (calendarConflict) {
+        logger.warn('Slot unavailable, conflicts with Google Calendar event', { userId });
+        return false;
+      }
+    } catch (error) {
+      logger.error('Slot availability check failed to read Google Calendar; rejecting slot', {
         userId,
-        requested: {
-          start: startTime.toISOString(),
-          end: endTime.toISOString()
-        }
+        message: error instanceof Error ? error.message : String(error)
       });
       return false;
     }
 
     return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Timezone helpers
+  // Wall-clock <-> UTC math via Intl.DateTimeFormat. No external deps.
+  // ---------------------------------------------------------------------------
+
+  private getZonedDateParts(date: Date, tz: string): ZonedDateParts {
+    if (!tz || tz === 'UTC') {
+      return {
+        year: date.getUTCFullYear(),
+        month: date.getUTCMonth() + 1,
+        day: date.getUTCDate(),
+        dayOfWeek: date.getUTCDay()
+      };
+    }
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      weekday: 'short',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const map: Record<string, string> = {};
+    for (const part of fmt.formatToParts(date)) {
+      if (part.type !== 'literal') map[part.type] = part.value;
+    }
+    const weekdayToDow: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    return {
+      year: Number(map.year),
+      month: Number(map.month),
+      day: Number(map.day),
+      dayOfWeek: weekdayToDow[map.weekday] ?? 0
+    };
+  }
+
+  private getTimezoneOffsetMs(date: Date, tz: string): number {
+    if (!tz || tz === 'UTC') return 0;
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    const map: Record<string, string> = {};
+    for (const part of fmt.formatToParts(date)) {
+      if (part.type !== 'literal') map[part.type] = part.value;
+    }
+    const asUtc = Date.UTC(
+      Number(map.year),
+      Number(map.month) - 1,
+      Number(map.day),
+      Number(map.hour) % 24,
+      Number(map.minute),
+      Number(map.second)
+    );
+    return asUtc - date.getTime();
+  }
+
+  /**
+   * Convert a wall-clock time in `tz` to a UTC Date. monthOneBased uses 1..12.
+   * Two-pass to handle DST transitions correctly.
+   */
+  private zonedTimeToUtc(
+    year: number,
+    monthOneBased: number,
+    day: number,
+    hour: number,
+    minute: number,
+    tz: string
+  ): Date {
+    if (!tz || tz === 'UTC') {
+      return new Date(Date.UTC(year, monthOneBased - 1, day, hour, minute));
+    }
+    const guess = Date.UTC(year, monthOneBased - 1, day, hour, minute);
+    const offset1 = this.getTimezoneOffsetMs(new Date(guess), tz);
+    const corrected = guess - offset1;
+    const offset2 = this.getTimezoneOffsetMs(new Date(corrected), tz);
+    return new Date(guess - offset2);
+  }
+
+  private formatLocalDate(parts: ZonedDateParts): string {
+    const mm = String(parts.month).padStart(2, '0');
+    const dd = String(parts.day).padStart(2, '0');
+    return `${parts.year}-${mm}-${dd}`;
   }
 }
 

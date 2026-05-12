@@ -72,7 +72,7 @@ async function handleGetAvailability(url: URL): Promise<Response> {
       orgId = config.organizationId;
     }
 
-    const slots = await availabilityService.getAvailableSlots({
+    const { slots, calendarErrors } = await availabilityService.getAvailableSlots({
       organizationId: orgId,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
@@ -87,7 +87,11 @@ async function handleGetAvailability(url: URL): Promise<Response> {
         userId: slot.userId,
         userName: slot.userName,
         userEmail: slot.userEmail
-      }))
+      })),
+      meta: {
+        calendarErrorCount: calendarErrors.length,
+        calendarErrors: calendarErrors.map(e => ({ userId: e.userId, message: e.message }))
+      }
     });
   } catch (error: any) {
     logger.error('Failed to get availability', { error, orgIdentifier });
