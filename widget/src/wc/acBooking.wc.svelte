@@ -38,7 +38,7 @@
   let {
     'org-id': orgId,
     'api-url': apiUrl,
-    locale: widgetLocale = 'en',
+    locale: widgetLocale,
     theme = 'auto',
   }: Attributes = $props();
 
@@ -73,8 +73,12 @@
   const slotsByTime = $derived(sortSlotsByTime(availableSlots));
 
   onMount(() => {
+    // No widgetLocale → ensureI18n falls back to getLocaleFromNavigator()
+    // inside i18n.ts. Only force-set when the host page passed locale="…".
     ensureI18n(widgetLocale);
-    locale.set(widgetLocale);
+    if (widgetLocale) {
+      locale.set(widgetLocale);
+    }
     updateTheme(theme || 'auto');
     setupMediaListener();
     loadConfig();
